@@ -13,11 +13,15 @@
 #include <fstream>
 #include <cstdlib>
 #include <cctype>
+#include <new>
 class Server
 {
     private:
-        int port;
-        int host;
+        std::string port;
+        std::string doman_name;
         std::string path;
+        std::string hostname;
+    public:
+        void pars_server(std::vector<std::string> server);
 };
 #endif

@@ -133,7 +133,7 @@ void parst_request(int fd,char *conf_file)
    else if (method[0] == "DELETE")
       std::cout << "this is not working\n";
 }
-int is_space(std::string line)
+int is_space(std::string &line)
 {
    int i = 0;
    if (line.empty())
@@ -141,16 +141,39 @@ int is_space(std::string line)
    while (line[i])
    {
       if (!isspace(line[i]))
+      {
+         line.erase(0,i);
          return (1);
+      }
       i++;
    }
    return 0;
 }
+void Server::pars_server(std::vector<std::string> server)
+{
+   int pos;
+   std::pair<std::string,std::string> Pair;
+   for (int i = 0; i < server.size();i++)
+   {
+      if ((pos = server[i].find (" ")) != std::string::npos || (pos = server[i].find ("   ")) != std::string::npos)
+      {
+         Pair.first = server[i].substr(0,pos);
+         Pair.second = server[i].substr (pos,server[i].length() - pos);
+      }
+      if (Pair.first == "listen")
+         port = Pair.second;
+      else if (Pair.first == "server_name")
+         hostname = Pair.second;
+      else if (Pair.first == "root")
+         path = Pair.second;
+      
+   } 
+}
 std::vector<std::string> parst_configfile(char *filename)
 {
    std::ifstream file (filename);
-   std::vector<std::string> config;
-   std::string str;
+   std::vector<std::vector<std::string> > server;
+   std::vector<std::string> str;
    int pos;
    if (!file.is_open())
    {
@@ -160,17 +183,30 @@ std::vector<std::string> parst_configfile(char *filename)
    std::string line;
    while (getline(file,line))
    {
-      config.push_back (line);
       if (pos = line.find("#") != std::string::npos)
       {
          line.erase(pos,line.length() - pos);
       }
+      if ((pos = line.find("server")) != std::string::npos && !str.empty())
+      {
+         if (line[pos + 6] == '\0' || isspace(line[pos + 6]) || line[pos + 6] == '{')
+         {
+            server.push_back(str);
+            str.clear();
+         }
+      }
       if(is_space(line))
-         std::cout <<line <<std::endl;
-      if (line.find("server") != std::string::npos)
+      {
+         str.push_back(line);
+      }
    }
-
-   return config;
+   server.push_back(str);
+   Server *servers = new Server[server.size()];
+   for (int i=0;i < server.size();i++)
+   {
+       servers[i].pars_server(server[i]);
+   }
+   return str;
 }
 int main(int ac,char **av)
 {
@@ -178,22 +214,22 @@ int main(int ac,char **av)
    struct sockaddr_in my_addr, peer_addr;
    char buf[100];
    parst_configfile(av[1]);
-   int fd = socket(AF_INET, SOCK_STREAM, 0);
-   int opt = 1;
-   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-        std::cout << "setsockopt failed\n";
-   my_addr.sin_family = AF_INET;
-   my_addr.sin_port = htons(1500);
-   my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-   bind(fd, (struct sockaddr *)&my_addr, sizeof(my_addr));
-   listen(fd,20);
-   socklen_t size = sizeof(my_addr);
-   while (1)
-   {
-      int fd1 = accept(fd, (struct sockaddr *)&my_addr, &size);
-      parst_request (fd1,av[1]);
-      close (fd1);
-   }
-   close(fd);
+   // int fd = socket(AF_INET, SOCK_STREAM, 0);
+   // int opt = 1;
+   // if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+   //      std::cout << "setsockopt failed\n";
+   // my_addr.sin_family = AF_INET;
+   // my_addr.sin_port = htons(1500);
+   // my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+   // bind(fd, (struct sockaddr *)&my_addr, sizeof(my_addr));
+   // listen(fd,20);
+   // socklen_t size = sizeof(my_addr);
+   // while (1)
+   // {
+   //    int fd1 = accept(fd, (struct sockaddr *)&my_addr, &size);
+   //    parst_request (fd1,av[1]);
+   //    close (fd1);
+   // }
+   // close(fd);
    return 0;
  }
