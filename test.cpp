@@ -1,6 +1,31 @@
 #include <stdio.h>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <new>
+class test
+{
+private:
+    int a;
+public:
+    test(/* args */)
+    {
+    }
+    ~test()
+    {
+        // delete this;
+    }
+};
+
 
 int main ()
 {
-    
+    test *A = new test;
+    // std::stringstream ss;
+    // std::ifstream file("index.html", std::ifstream::binary);
+    // ss << file.rdbuf();
+    // std::string str;
+    // while (ss >> str)
+    //     std::cout << str <<std::endl;
+
 }

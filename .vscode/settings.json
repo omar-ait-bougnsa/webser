@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "format": "cpp",
-        "sstream": "cpp"
+        "sstream": "cpp",
+        "iosfwd": "cpp"
     }
 }
