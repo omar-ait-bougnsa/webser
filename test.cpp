@@ -1,31 +1,21 @@
-#include <stdio.h>
-#include <fstream>
 #include <iostream>
-#include <sstream>
-#include <new>
-class test
-{
-private:
-    int a;
-public:
-    test(/* args */)
-    {
+#include <cstdlib>  // for strtoll
+#include <cerrno>   // for errno
+#include <climits>  // for LLONG_MAX and LLONG_MIN
+
+int main() {
+    const char *str = "1239999999999999999999999999999999999999945abc";
+    char *end;
+    errno = 0;  // reset errno
+
+    long long result = strtoll(str, &end, 10);
+
+    if (errno == ERANGE) {
+        std::cerr << "Out of range!" << std::endl;
+    } else {
+        std::cout << "Parsed number: " << result << std::endl;
+        std::cout << "Rest of string: " << end << std::endl;
     }
-    ~test()
-    {
-        // delete this;
-    }
-};
 
-
-int main ()
-{
-    test *A = new test;
-    // std::stringstream ss;
-    // std::ifstream file("index.html", std::ifstream::binary);
-    // ss << file.rdbuf();
-    // std::string str;
-    // while (ss >> str)
-    //     std::cout << str <<std::endl;
-
+    return 0;
 }

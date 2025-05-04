@@ -60,6 +60,36 @@ void Server::pars_Route(std::vector<std::string>location)
       i++;
    }
 }
+std::map<int,std::string> Server::prse_error_page(std::string str)
+{
+   std::pair<int,std::string> Pair;
+   std::map<int,std::string> Map;
+   long int nb;
+   char * pos;
+   std::vector<std::string> v = split_withspace (str);
+   int i = 0;
+   if (v.size() < 2)
+   {
+      std::cout <<"error\n";
+      exit (1);
+   }
+   while (i < v.size() - 1)
+   {
+      nb = strtoll(v[i].c_str(), &pos, 10);
+      if (pos[0] == '\0')
+      {
+         Pair.first = nb;
+         Pair.second = v[v.size() - 1];
+         Map.insert(Pair);
+      }
+      else
+      {
+         exit (1);
+         std::cout <<"error\n";
+      }
+
+   }
+}
 void Server::pars_server(std::vector<std::string> server,int size)
 {
    int pos;
@@ -75,7 +105,11 @@ void Server::pars_server(std::vector<std::string> server,int size)
       if (Pair.first == "listen")
          port = Pair.second;
       else if (Pair.first == "server_name")
-         doman_name = Pair.second;
+         server_names = split_withspace(Pair.second);
+      else if (Pair.first == "error_page")
+      {
+         prse_error_page(Pair.second);
+      }
       else if (Pair.first == "location")
       {
         while (server[i].find("}") == std::string::npos)

@@ -31,7 +31,6 @@ class Server : public Route
 {
     private:
         std::string port;
-        std::string doman_name;
         std::vector<std::string> server_names;
         std::map<int, std::string> error_page;
         size_t client_max_body_size;
@@ -39,6 +38,7 @@ class Server : public Route
     public:
         void pars_server(std::vector<std::string> server,int size);
         void pars_Route(std::vector<std::string>location);
+        std::map<int,std::string> prse_error_page(std::string str);
         void print()
         {
             std::cout << "port = " <<std::endl;
