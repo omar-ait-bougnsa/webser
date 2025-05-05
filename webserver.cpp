@@ -2,7 +2,6 @@
 std::vector<std::string> split(std::string line, char target)
 {
 	size_t pos = 0;
-   int less = 0;
 	std::vector <std::string> str;
 	while (1)
 	{
@@ -31,7 +30,7 @@ std::vector<std::string> split_withspace(std::string str)
 std::string check_extation (std::string path)
 {
    std::string str;
-   int pos = path.find_last_of(".");
+   size_t pos = path.find_last_of(".");
    if (pos == std::string::npos)
       return "";
    path.erase(0,pos);
@@ -62,8 +61,6 @@ std::string check_extation (std::string path)
 
 void handel_get(int fd,std::vector<std::string> method)
 {
-   int size1;
-   char buf[100];
    std::string str = check_extation(method[1]);
    std::string header = "HTTP/1.1 200 OK\r\nContent-Type: " + str + "\r\n\r\n";
    send(fd, header.c_str(),header.length(), 0);
@@ -87,24 +84,24 @@ void handel_get(int fd,std::vector<std::string> method)
 
 void handel_post(int fd,std::vector<std::string> method,std::string request)
 {
-   int size1;
-   char buf[100];
+   std::stringstream ss;
+   (void)request;
    const char *header = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
    send(fd, header, strlen(header), 0);
-   std::ofstream file;
-   file.open(method[1]);
+   std::ifstream file;
+   file.open(method[1].c_str());
    if (method[1] == "/")
       file.open("index.html");
    if (file.is_open())
       file.open("404.html");
-   size_t pos = request.find ("\r\n\r\n");
-   if (pos == std::string::npos)
-         std::cout << "error\n";
+   ss << file.rdbuf();
+   file.seekg(0, file.end);
+   size_t pos = file.tellg();
    // std::string 
-   send(fd, buf, size1, 0);
+   send(fd,ss.str().c_str(),pos, 0);
 }
 
-void parst_request(int fd,char *conf_file)
+void parst_request(int fd)
 {
    char buf[1024];
    std::string full_request;
@@ -131,15 +128,17 @@ void parst_request(int fd,char *conf_file)
 
 int main(int ac,char **av)
 {
-   int size1;
+   
+   if (ac != 2)
+      exit (1);
    std::vector <Server> server;
-   struct sockaddr_in my_addr, peer_addr;
-   char buf[100];
+   // struct sockaddr_in my_addr, peer_addr;
    server = parst_configfile(av[1]);
-   int i =0;
+   size_t i =0;
    while (i < server.size())
    {
-      server[i].print();
+      server[i].printServer();
+      i++;
    }
    // int fd = socket(AF_INET, SOCK_STREAM, 0);
    // int opt = 1;

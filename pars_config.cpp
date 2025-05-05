@@ -60,14 +60,13 @@ void Server::pars_Route(std::vector<std::string>location)
       i++;
    }
 }
-std::map<int,std::string> Server::prse_error_page(std::string str)
+void Server::prse_error_page(std::string str)
 {
    std::pair<int,std::string> Pair;
-   std::map<int,std::string> Map;
    long int nb;
    char * pos;
    std::vector<std::string> v = split_withspace (str);
-   int i = 0;
+   size_t i = 0;
    if (v.size() < 2)
    {
       std::cout <<"error\n";
@@ -80,22 +79,25 @@ std::map<int,std::string> Server::prse_error_page(std::string str)
       {
          Pair.first = nb;
          Pair.second = v[v.size() - 1];
-         Map.insert(Pair);
+         error_page.insert(Pair);
       }
       else
       {
+         std::cout <<"error in page error\n";
          exit (1);
-         std::cout <<"error\n";
       }
-
+      i++;
    }
+
 }
 void Server::pars_server(std::vector<std::string> server,int size)
 {
-   int pos;
+   size_t pos;
+   char *end;
+   (void)size;
    std::pair<std::string,std::string> Pair;
    std::vector<std::string>str;
-   for (int i = 0; i < server.size();i++)
+   for (size_t i = 0; i < server.size();i++)
    {
       if ((pos = server[i].find (" ")) != std::string::npos || (pos = server[i].find ("   ")) != std::string::npos)
       {
@@ -109,6 +111,14 @@ void Server::pars_server(std::vector<std::string> server,int size)
       else if (Pair.first == "error_page")
       {
          prse_error_page(Pair.second);
+      }
+      else if (Pair.first == "client_max_body_size")
+      {
+         size_t nb = strtoll(Pair.second.c_str(), &end, 10);
+         if (end[0] == 'M' && end[1] == '\0')
+            client_max_body_size = nb;
+         else
+            std::cout <<"\n\n\nend = " <<end[0]<<std::endl;
       }
       else if (Pair.first == "location")
       {
@@ -128,7 +138,7 @@ std::vector<Server> parst_configfile(char *filename)
    std::ifstream file (filename);
    std::vector<std::vector<std::string> > server;
    std::vector<std::string> str;
-   int pos;
+   size_t pos;
    if (!file.is_open())
    {
       std::cout <<"can't open Configuration file\n";
@@ -137,11 +147,13 @@ std::vector<Server> parst_configfile(char *filename)
    std::string line;
    while (getline(file,line))
    {
-      if (pos = line.find("#") != std::string::npos)
+      pos = line.find("#");
+      if (pos != std::string::npos)
       {
          line.erase(pos,line.length() - pos);
       }
-      if ((pos = line.find("server")) != std::string::npos && !str.empty())
+      pos = line.find("server");
+      if (pos  != std::string::npos && !str.empty())
       {
          if (line[pos + 6] == '\0' || isspace(line[pos + 6]) || line[pos + 6] == '{')
          {
@@ -157,7 +169,7 @@ std::vector<Server> parst_configfile(char *filename)
    server.push_back(str);
    Server servers;
    std::vector<Server> v;
-   for (int i=0;i < server.size();i++)
+   for (size_t i=0;i < server.size();i++)
    {
        servers.pars_server(server[i],server.size());
        v.push_back(servers);

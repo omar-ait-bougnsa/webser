@@ -26,6 +26,8 @@ class Route
         std::string autoindex;
         std::vector<std::string> methods;
         std::vector<std::string> index_files;
+    public:
+        void printRoute() const;
 };
 class Server : public Route
 {
@@ -38,11 +40,8 @@ class Server : public Route
     public:
         void pars_server(std::vector<std::string> server,int size);
         void pars_Route(std::vector<std::string>location);
-        std::map<int,std::string> prse_error_page(std::string str);
-        void print()
-        {
-            std::cout << "port = " <<std::endl;
-        }
+        void prse_error_page(std::string str);
+        void printServer() const;
 };
 std::vector<std::string> split(std::string line, char target);
 std::vector<Server> parst_configfile(char *filename);
