@@ -1,10 +1,22 @@
 #include "webserver.hpp"
 
-int is_space(std::string &line)
+int remove_space(std::string &line)
 {
-   int i = 0;
+   size_t i;
    if (line.empty())
       return (0);
+
+   i = line.size() -1;
+   while (i > 0)
+   {
+      if (!isspace(line[i]))
+      {
+         line.erase(i +1,line.size() - i);
+         break;
+      }
+      i--;
+   }
+   i = 0;
    while (line[i])
    {
       if (!isspace(line[i]))
@@ -60,6 +72,7 @@ void Server::pars_Route(std::vector<std::string>location)
       i++;
    }
 }
+
 void Server::prse_error_page(std::string str)
 {
    std::pair<int,std::string> Pair;
@@ -90,11 +103,24 @@ void Server::prse_error_page(std::string str)
    }
 
 }
+void checK_end_line(std::vector<std::string> server)
+{
+   size_t i = 0;
+   while (i < server.size())
+   {
+      size_t size = server[i].size() - 1;
+      std::cout << "end linewwww = " << server[i] <<"::" << std::endl;
+      std::cout << "end line = " << server[i][size] << std::endl;
+      i++;
+   }
+
+}
 void Server::pars_server(std::vector<std::string> server,int size)
 {
    size_t pos;
    char *end;
    (void)size;
+   checK_end_line(server);
    std::pair<std::string,std::string> Pair;
    std::vector<std::string>str;
    for (size_t i = 0; i < server.size();i++)
@@ -104,6 +130,19 @@ void Server::pars_server(std::vector<std::string> server,int size)
          Pair.first = server[i].substr(0,pos);
          Pair.second = server[i].substr (pos,server[i].length() - pos);
       }
+      if (Pair.first == "location")
+      {
+        while (server[i].find("}") == std::string::npos)
+        {
+            str.push_back(server[i]);
+            i++;
+        }
+        i++;
+        pars_Route (str);
+      }
+      if (Pair.second[Pair.second.size() - 1] != ';')
+         throw ("Error some line doesn't end by ';'");
+      Pair.second[Pair.second.size() - 1] = '\0';
       if (Pair.first == "listen")
          port = Pair.second;
       else if (Pair.first == "server_name")
@@ -119,15 +158,6 @@ void Server::pars_server(std::vector<std::string> server,int size)
             client_max_body_size = nb;
          else
             std::cout <<"\n\n\nend = " <<end[0]<<std::endl;
-      }
-      else if (Pair.first == "location")
-      {
-        while (server[i].find("}") == std::string::npos)
-        {
-            str.push_back(server[i]);
-            i++;
-        }
-        pars_Route (str);
       }
       Pair.first = "", Pair.second = "";
    }
@@ -161,7 +191,7 @@ std::vector<Server> parst_configfile(char *filename)
             str.clear();
          }
       }
-      if(is_space(line))
+      if(remove_space(line))
       {
          str.push_back(line);
       }
@@ -169,7 +199,7 @@ std::vector<Server> parst_configfile(char *filename)
    server.push_back(str);
    Server servers;
    std::vector<Server> v;
-   for (size_t i=0;i < server.size();i++)
+   for (size_t i = 0;i < server.size();i++)
    {
        servers.pars_server(server[i],server.size());
        v.push_back(servers);

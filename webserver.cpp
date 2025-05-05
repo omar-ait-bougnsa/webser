@@ -133,7 +133,15 @@ int main(int ac,char **av)
       exit (1);
    std::vector <Server> server;
    // struct sockaddr_in my_addr, peer_addr;
-   server = parst_configfile(av[1]);
+   try
+   {
+      server = parst_configfile(av[1]);
+   }
+   catch(const char * e)
+   {
+      std::cout << e << '\n';
+   }
+   
    size_t i =0;
    while (i < server.size())
    {
