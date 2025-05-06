@@ -103,26 +103,35 @@ void Server::prse_error_page(std::string str)
    }
 
 }
-void checK_end_line(std::vector<std::string> server)
+void check_bracket(std::vector<std::string> &server)
 {
    size_t i = 0;
+   int bracket = 0;
+   size_t pos;
    while (i < server.size())
    {
-      size_t size = server[i].size() - 1;
-      std::cout << "end linewwww = " << server[i] <<"::" << std::endl;
-      std::cout << "end line = " << server[i][size] << std::endl;
+      pos = server[i].find("{");
+      if (pos != std::string::npos)
+      {
+         bracket += 1;
+         server[i].erase(pos,1);
+      }
+      pos = server[i].find("}");
+      if (pos != std::string::npos)
+         bracket -= 1;
       i++;
    }
-
+   if (bracket == 0)
+      throw ("Error bracket not closed\n");
 }
 void Server::pars_server(std::vector<std::string> server,int size)
 {
    size_t pos;
    char *end;
    (void)size;
-   checK_end_line(server);
    std::pair<std::string,std::string> Pair;
    std::vector<std::string>str;
+   check_bracket(server);
    for (size_t i = 0; i < server.size();i++)
    {
       if ((pos = server[i].find (" ")) != std::string::npos || (pos = server[i].find ("   ")) != std::string::npos)
@@ -187,6 +196,7 @@ std::vector<Server> parst_configfile(char *filename)
       {
          if (line[pos + 6] == '\0' || isspace(line[pos + 6]) || line[pos + 6] == '{')
          {
+            str.push_back(line);
             server.push_back(str);
             str.clear();
          }
