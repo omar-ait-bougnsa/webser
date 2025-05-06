@@ -1,6 +1,6 @@
 name = webserver 
 CC=c++
-flag= -Wall -Wextra -Werror -std=c++98
+flag= -Wall -Wextra -Werror -std=c++98 -fsanitize=address -g
 
 SRC= webserver.cpp pars_config.cpp print.cpp
 OBJ=$(SRC:.cpp=.o)

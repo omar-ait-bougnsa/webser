@@ -1,0 +1,89 @@
+# webserv.yaml - Complete YAML Configuration Example
+
+global:
+  error_log: "/var/log/webserv/error.log"
+  pid_file: "/var/run/webserv.pid"
+
+servers:
+  # DEFAULT SERVER (catches all unmatched requests)
+  - listen: 
+      - "8080 default_server"
+    server_name: "_"
+    client_max_body_size: "1M"
+    error_pages:
+      404: "/errors/404.html"
+      403: "/errors/403.html"
+      500: "/errors/500.html"
+    
+    locations:
+      - path: "/"
+        root: "/var/www/default"
+        index: "index.html"
+        autoindex: false
+        methods: ["GET"]
+
+  # MAIN WEBSITE (example.com)
+  - listen: "8080"
+    server_name: "example.com www.example.com"
+    client_max_body_size: "10M"
+    error_pages:
+      404: "/custom_404.html"
+      500: "/custom_500.html"
+    
+    locations:
+      # API ROUTE
+      - path: "/api"
+        root: "/var/www/api"
+        index: "api.json"
+        methods: ["GET", "POST"]
+        autoindex: false
+
+      # UPLOAD ROUTE
+      - path: "/uploads"
+        root: "/var/www/uploads"
+        methods: ["GET", "POST", "DELETE"]
+        autoindex: true
+        upload_store: "/tmp/uploads"
+        upload_limit: "50M"
+
+      # REDIRECT EXAMPLE
+      - path: "/old"
+        redirect: 
+          target: "/new"
+          code: 301
+
+      # CGI ROUTE
+      - path: "/cgi-bin"
+        root: "/var/www/cgi"
+        methods: ["GET", "POST"]
+        cgi:
+          extensions: [".py", ".php"]
+          interpreters:
+            ".py": "/usr/bin/python3"
+            ".php": "/usr/bin/php"
+
+      # STATIC FILES
+      - path: "/static"
+        root: "/var/www/static"
+        index: "index.html"
+        methods: ["GET"]
+        autoindex: true
+
+  # DEVELOPMENT SERVER
+  - listen: "127.0.0.1:9000"
+    server_name: "localhost"
+    
+    locations:
+      - path: "/"
+        root: "/home/developer/project"
+        index: "dev.html"
+        autoindex: true
+        methods: ["GET", "POST"]
+
+      - path: "\.php$"
+        root: "/home/developer/php"
+        cgi:
+          extensions: [".php"]
+          interpreters:
+            ".php": "/usr/bin/php-cgi"
+        methods: ["GET", "POST"]

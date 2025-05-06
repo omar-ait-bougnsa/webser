@@ -20,14 +20,17 @@
 std::vector<std::string> split_withspace(std::string str);
 class Route
 {
-    protected :
+    private :
         std::string path_prefix;
         std::string root_directory;
         std::string autoindex;
         std::vector<std::string> methods;
         std::vector<std::string> index_files;
+        std::vector<std::string> cgi;
+        std::vector<std::string> cgi_path;
     public:
         void printRoute() const;
+        Route pars_Route(std::vector<std::string>location);
 };
 class Server : public Route
 {
@@ -39,7 +42,6 @@ class Server : public Route
         std::vector<Route> routes;
     public:
         void pars_server(std::vector<std::string> server,int size);
-        void pars_Route(std::vector<std::string>location);
         void prse_error_page(std::string str);
         void printServer() const;
 };

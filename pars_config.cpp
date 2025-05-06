@@ -28,7 +28,7 @@ int remove_space(std::string &line)
    }
    return 0;
 }
-void Server::pars_Route(std::vector<std::string>location)
+Route Route::pars_Route(std::vector<std::string>location)
 {
    size_t i = 0;
    std::vector<std::string>v;
@@ -71,6 +71,7 @@ void Server::pars_Route(std::vector<std::string>location)
           methods = v;
       i++;
    }
+   return *this;
 }
 
 void Server::prse_error_page(std::string str)
@@ -121,7 +122,7 @@ void check_bracket(std::vector<std::string> &server)
          bracket -= 1;
       i++;
    }
-   if (bracket == 0)
+   if (bracket != 0)
       throw ("Error bracket not closed\n");
 }
 void Server::pars_server(std::vector<std::string> server,int size)
@@ -147,19 +148,14 @@ void Server::pars_server(std::vector<std::string> server,int size)
             i++;
         }
         i++;
-        pars_Route (str);
+      routes.push_back(pars_Route (str));
       }
-      if (Pair.second[Pair.second.size() - 1] != ';')
-         throw ("Error some line doesn't end by ';'");
-      Pair.second[Pair.second.size() - 1] = '\0';
       if (Pair.first == "listen")
          port = Pair.second;
       else if (Pair.first == "server_name")
          server_names = split_withspace(Pair.second);
       else if (Pair.first == "error_page")
-      {
          prse_error_page(Pair.second);
-      }
       else if (Pair.first == "client_max_body_size")
       {
          size_t nb = strtoll(Pair.second.c_str(), &end, 10);
@@ -177,6 +173,7 @@ std::vector<Server> parst_configfile(char *filename)
    std::ifstream file (filename);
    std::vector<std::vector<std::string> > server;
    std::vector<std::string> str;
+   bool check_server = false;
    size_t pos;
    if (!file.is_open())
    {
@@ -192,9 +189,12 @@ std::vector<Server> parst_configfile(char *filename)
          line.erase(pos,line.length() - pos);
       }
       pos = line.find("server");
-      if (pos  != std::string::npos && !str.empty())
+      if (pos  != std::string::npos && !str.empty() && !check_server)
+            throw ("Error config file must start 'server'");
+      if (pos  != std::string::npos)
       {
-         if (line[pos + 6] == '\0' || isspace(line[pos + 6]) || line[pos + 6] == '{')
+         check_server = true;
+         if (!str.empty() && (line[pos + 6] == '\0' || isspace(line[pos + 6]) || line[pos + 6] == '{'))
          {
             str.push_back(line);
             server.push_back(str);

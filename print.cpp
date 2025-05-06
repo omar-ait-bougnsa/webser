@@ -33,9 +33,9 @@ void Server::printServer() const
             std::cout << "    Error " << it->first << ": " << it->second << "\n";
 
         std::cout << "  Client Max Body Size: " << client_max_body_size << "\n";
-        printRoute();
-        std::cout << "\n  Nested Routes:\n";
-        for (size_t i = 0; i < routes.size(); ++i) {
+        
+        for (size_t i = 0; i < routes.size(); ++i) 
+        {
             std::cout << "    Route " << i + 1 << ":\n";
             routes[i].printRoute();
         }
