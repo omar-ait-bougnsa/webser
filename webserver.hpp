@@ -39,12 +39,24 @@ class Server : public Route
         std::vector<std::string> server_names;
         std::map<int, std::string> error_page;
         size_t client_max_body_size;
+        std::string   root;
+        std::string   autoindex;
+        std::vector<std::string>    index_files;
         std::vector<Route> routes;
     public:
         void pars_server(std::vector<std::string> server,int size);
         void prse_error_page(std::string str);
         void printServer() const;
 };
+
+class HttpResponse
+{
+public:
+    int status_code;
+    std::map<std::string, std::string> headers;
+    std::string body;
+};
 std::vector<std::string> split(std::string line, char target);
 std::vector<Server> parst_configfile(char *filename);
+void handel_post(int fd,std::vector<std::string> method,std::string request);
 #endif

@@ -5,7 +5,6 @@ int remove_space(std::string &line)
    size_t i;
    if (line.empty())
       return (0);
-
    i = line.size() -1;
    while (i > 0)
    {
@@ -67,8 +66,7 @@ Route Route::pars_Route(std::vector<std::string>location)
       else if (str == "}" && v.size() == 1)
          continue;
       else
-         throw ("Error in logic location");
-
+         throw ("Error: some value in location not valid");
       i++;
    }
    return *this;
@@ -104,6 +102,7 @@ void Server::prse_error_page(std::string str)
    }
 
 }
+
 void check_bracket(std::vector<std::string> &server)
 {
    size_t i = 0;
@@ -133,6 +132,9 @@ void Server::pars_server(std::vector<std::string> server,int size)
    std::pair<std::string,std::string> Pair;
    std::vector<std::string>str;
    check_bracket(server);
+   server.erase(server.begin(),server.begin() + 1);
+   if (server[server.size() - 1] != "}")
+      throw ("Error in in config file");
    for (size_t i = 0; i < server.size();i++)
    {
       if ((pos = server[i].find (" ")) != std::string::npos || (pos = server[i].find ("   ")) != std::string::npos)
@@ -140,6 +142,8 @@ void Server::pars_server(std::vector<std::string> server,int size)
          Pair.first = server[i].substr(0,pos);
          Pair.second = server[i].substr (pos,server[i].length() - pos);
       }
+      else
+         Pair.first = server[i];
       if (Pair.first == "location")
       {
         while (server[i].find("}") == std::string::npos)
@@ -147,10 +151,10 @@ void Server::pars_server(std::vector<std::string> server,int size)
             str.push_back(server[i]);
             i++;
         }
-        i++;
       routes.push_back(pars_Route (str));
+      str.clear();
       }
-      if (Pair.first == "listen")
+      else if (Pair.first == "listen")
          port = Pair.second;
       else if (Pair.first == "server_name")
          server_names = split_withspace(Pair.second);
@@ -162,8 +166,10 @@ void Server::pars_server(std::vector<std::string> server,int size)
          if (end[0] == 'M' && end[1] == '\0')
             client_max_body_size = nb;
          else
-            std::cout <<"\n\n\nend = " <<end[0]<<std::endl;
+            throw ("Error client max body size");
       }
+      else if ((Pair.first != "}" || !Pair.second.empty()) && !Pair.first.empty())
+         throw ("error in server");
       Pair.first = "", Pair.second = "";
    }
 }
@@ -190,7 +196,7 @@ std::vector<Server> parst_configfile(char *filename)
       }
       pos = line.find("server");
       if (pos  != std::string::npos && !str.empty() && !check_server)
-            throw ("Error config file must start 'server'");
+            throw ("Error config some line is not in block server ");
       if (pos  != std::string::npos)
       {
          check_server = true;
@@ -205,6 +211,8 @@ std::vector<Server> parst_configfile(char *filename)
       {
          if (line[line.size() -1] == ';')
             line.erase(line.size() -1,1);
+         // else if ()
+         //    throw ("Error some line not end by ';'");
          str.push_back(line);
       }
    }

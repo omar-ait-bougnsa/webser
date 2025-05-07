@@ -82,24 +82,6 @@ void handel_get(int fd,std::vector<std::string> method)
    return; 
 }
 
-void handel_post(int fd,std::vector<std::string> method,std::string request)
-{
-   std::stringstream ss;
-   (void)request;
-   const char *header = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n";
-   send(fd, header, strlen(header), 0);
-   std::ifstream file;
-   file.open(method[1].c_str());
-   if (method[1] == "/")
-      file.open("index.html");
-   if (file.is_open())
-      file.open("404.html");
-   ss << file.rdbuf();
-   file.seekg(0, file.end);
-   size_t pos = file.tellg();
-   // std::string 
-   send(fd,ss.str().c_str(),pos, 0);
-}
 
 void parst_request(int fd)
 {
@@ -132,7 +114,7 @@ int main(int ac,char **av)
    if (ac != 2)
       exit (1);
    std::vector <Server> server;
-   // struct sockaddr_in my_addr, peer_addr;
+   struct sockaddr_in my_addr;
    try
    {
       server = parst_configfile(av[1]);
@@ -140,6 +122,7 @@ int main(int ac,char **av)
    catch(const char * e)
    {
       std::cout << e << '\n';
+      return 0;
    }
    
    size_t i =0;
@@ -148,22 +131,22 @@ int main(int ac,char **av)
       server[i].printServer();
       i++;
    }
-   // int fd = socket(AF_INET, SOCK_STREAM, 0);
-   // int opt = 1;
-   // if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-   //      std::cout << "setsockopt failed\n";
-   // my_addr.sin_family = AF_INET;
-   // my_addr.sin_port = htons(1500);
-   // my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-   // bind(fd, (struct sockaddr *)&my_addr, sizeof(my_addr));
-   // listen(fd,20);
-   // socklen_t size = sizeof(my_addr);
-   // while (1)
-   // {
-   //    int fd1 = accept(fd, (struct sockaddr *)&my_addr, &size);
-   //    parst_request (fd1,av[1]);
-   //    close (fd1);
-   // }
-   // close(fd);
+   int fd = socket(AF_INET, SOCK_STREAM, 0);
+   int opt = 1;
+   if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
+        std::cout << "setsockopt failed\n";
+   my_addr.sin_family = AF_INET;
+   my_addr.sin_port = htons(1500);
+   my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+   bind(fd, (struct sockaddr *)&my_addr, sizeof(my_addr));
+   listen(fd,20);
+   socklen_t size = sizeof(my_addr);
+   while (1)
+   {
+      int fd1 = accept(fd, (struct sockaddr *)&my_addr, &size);
+      parst_request (fd1);
+      close (fd1);
+   }
+   close(fd);
    return 0;
  }
