@@ -43,32 +43,32 @@ Route Route::pars_Route(std::vector<std::string>location)
       else if (str  == "root")
       {
          if (v.size() != 1)
-         {
-            std::cout <<"error root\n";
-            exit(1);
-         }
+            throw ("error in root");
          root_directory = v[0];
       }
       else if (str  == "location")
       {
          if (v.size() != 1)
-         {
-            std::cout <<"error location\n";
-            exit(1);
-         }
+            throw ("Error invalid location");
          path_prefix = v[0];
       }
       else if (str  == "autoindex")
       {
-         if (v.size() != 1)
-         {
-            std::cout <<"error autoindex \n";
-            exit(1);
-         }
+         if (v.size() != 1 || (v[0] != "on" && v[0] != "off"))
+            throw ("error in autoindex must 'on' or 'of'");
          path_prefix = v[0];
       }
       else if (str == "methods")
           methods = v;
+      else if (str == "cgi")
+         cgi = v;
+      else if (str == "cgi_path")
+         cgi_path = v;
+      else if (str == "}" && v.size() == 1)
+         continue;
+      else
+         throw ("Error in logic location");
+
       i++;
    }
    return *this;
@@ -203,6 +203,8 @@ std::vector<Server> parst_configfile(char *filename)
       }
       if(remove_space(line))
       {
+         if (line[line.size() -1] == ';')
+            line.erase(line.size() -1,1);
          str.push_back(line);
       }
    }
