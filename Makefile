@@ -2,7 +2,7 @@ name = webserver
 CC=c++
 flag= -Wall -Wextra -Werror -std=c++98 -fsanitize=address -g
 
-SRC= webserver.cpp pars_config.cpp print.cpp
+SRC= webserver.cpp pars_config.cpp print.cpp httpResponse.cpp
 OBJ=$(SRC:.cpp=.o)
 
 all:$(name)

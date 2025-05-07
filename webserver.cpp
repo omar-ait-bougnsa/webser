@@ -85,15 +85,14 @@ void handel_get(int fd,std::vector<std::string> method)
 
 void parst_request(int fd)
 {
-   char buf[1024];
+   char buf[1000];
    std::string full_request;
    ssize_t bytes_read;
-   while ((bytes_read = read(fd, buf, 1023)) > 0)
+   while ((bytes_read = read(fd, buf, 999)) > 0)
    {
       buf[bytes_read] = '\0';
       full_request += buf;
-      if (full_request.find("\n") != std::string::npos)
-         break;
+      break;
    }
    int i = full_request.find("\n");
    std::string path = full_request.substr(0,i);
@@ -106,7 +105,6 @@ void parst_request(int fd)
    else if (method[0] == "DELETE")
       std::cout <<"baki makhdam\n";
 }
-
 
 int main(int ac,char **av)
 {
@@ -128,7 +126,7 @@ int main(int ac,char **av)
    size_t i =0;
    while (i < server.size())
    {
-      server[i].printServer();
+     // server[i].printServer();
       i++;
    }
    int fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -144,6 +142,7 @@ int main(int ac,char **av)
    while (1)
    {
       int fd1 = accept(fd, (struct sockaddr *)&my_addr, &size);
+      std::cout <<"llll\n";
       parst_request (fd1);
       close (fd1);
    }
