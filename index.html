@@ -3,51 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Color and File Upload</title>
+    <title>Test File Upload</title>
 </head>
 <body>
-    <h2>Select a Color and Upload a File</h2>
+    <h2>File Upload Test</h2>
 
-    <!-- Form for uploading color and file -->
-    <form id="colorFileForm" method="POST" enctype="multipart/form-data" action="/your-server-endpoint">
-        <label for="color">Choose a color:</label>
-        <input type="color" id="color" name="color" value="#ff0000"><br><br>
-
+    <!-- Form to upload a file -->
+    <form id="uploadForm" method="POST" enctype="multipart/form-data" action="/your-server-endpoint">
         <label for="file">Choose a file to upload:</label>
-        <input type="file" id="file" name="file" accept="image/*"><br><br>
+        <input type="file" id="file" name="file" accept="image/*, .pdf, .txt" required><br><br>
 
-        <button type="submit">Send Color and File</button>
+        <button type="submit">Upload File</button>
     </form>
 
     <script>
-        // Handle form submission using JavaScript to send data
-        const form = document.getElementById('colorFileForm');
+        // Handle form submission using JavaScript to show a simple message
+        const form = document.getElementById('uploadForm');
         form.addEventListener('submit', function (e) {
             e.preventDefault(); // Prevent the default form submission
 
-            const formData = new FormData(); // Create FormData object to send the data
-            const color = document.getElementById('color').value;
-            const file = document.getElementById('file').files[0];
+            const formData = new FormData(form); // Collect form data (including the file)
 
-            formData.append('color', color);  // Append color
-            formData.append('file', file);    // Append file
-
-            // Send data using Fetch API
+            // Send the data using Fetch API
             fetch('/your-server-endpoint', {
                 method: 'POST',
-                body: formData // Send the FormData object which contains the color and file
+                body: formData // Send the FormData which contains the file
             })
-            .then(response => response.json())
+            .then(response => response.json()) // Expect JSON response from the server
             .then(data => {
                 console.log('Success:', data);
-                alert('Color and file uploaded successfully!');
+                alert('File uploaded successfully!');
             })
             .catch((error) => {
                 console.error('Error:', error);
-                alert('Error uploading data.');
+                alert('Error uploading file.');
             });
         });
     </script>
 </body>
 </html>
+
 

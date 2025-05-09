@@ -59,4 +59,5 @@ public:
 std::vector<std::string> split(std::string line, char target);
 std::vector<Server> parst_configfile(char *filename);
 void handel_post(int fd,std::vector<std::string> method,std::string request);
+void handel_get(int fd,std::vector<std::string> method);
 #endif
