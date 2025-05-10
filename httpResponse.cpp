@@ -22,16 +22,21 @@
 
 void handel_post(int fd, std::vector<std::string> method, std::string request)
 {
-    (void)request;
-    (void)method;
-    std::string body =  "{\"message\":\"Upload successful and all it is good\"}";
+   HttpResponse post;
+   size_t pos = request.find("\r\n\r\n");
+   if (pos != std::string::npos)
+      post.body = request.substr (pos +5,request.length() - 1);
+   
+   std::cout <<post.body <<std::endl;
+   (void)method;
+    std::string body =  "{\"txt\":\"Upload successful and all it is good\"}";
     std::stringstream ss;
     ss << "HTTP/1.1 200 OK\r\n";
-    ss << "Content-Type: application/json\r\n";
+    ss << "Content-Type: txt/txt\r\n";
     ss << "Content-Length: " << body.size() << "\r\n";
     ss << "Connection: close\r\n\r\n";
     ss << body;
-
+    
     std::string response = ss.str();
     send(fd, response.c_str(), response.size(), 0);
 }
@@ -42,7 +47,6 @@ std::string check_extation (std::string path)
    if (pos == std::string::npos)
       return "";
    path.erase(0,pos);
-   std::cout <<"extation = "<< path <<std::endl;
    std::string image_extension = ".jpg .jpeg .png .gif .bmp .tiff .webp .svg";
    std::string text_extension = ".txt .html .css .js .json .xml .csv .rtf .odt .php .py .java .cpp .sql .bat";
    std::string document_extension = ".pdf .doc .docx .xls .xlsx .ppt .pptx";
@@ -78,9 +82,7 @@ void handel_get(int fd,std::vector<std::string> method)
       file.open(method[1].c_str(), std::ios::binary);
    std::stringstream ss;
    if (!file.is_open())
-   {
       file.open("404.html", std::ios::binary);
-   }
    ss << file.rdbuf();
    file.seekg(0, file.end);
    size_t pos = file.tellg();

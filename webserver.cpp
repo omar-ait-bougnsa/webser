@@ -41,8 +41,11 @@ void parst_request(int fd)
    }
    int i = full_request.find("\n");
    std::string path = full_request.substr(0,i);
-   std::cout <<full_request <<std::endl;
    std::vector <std::string> method = split (path,' ');
+   // size_t pos = full_request.find("\r\n\r\n");
+   // if (pos != std::string::npos)
+   // full_request.erase(0,pos);
+   //std::cout <<full_request <<std::endl;
    if (method[0] == "GET")
       handel_get(fd,method);
    else if (method[0] == "POST")
