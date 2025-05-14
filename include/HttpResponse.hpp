@@ -7,14 +7,16 @@
 class HttpResponse
 {
 private:
-    const HttpRequest                       &_request;
+    const HttpRequest                       _request;
     int                                     _statusCode;
+    std::string                             _boundary;
     std::string                             _reasonPhrase;                
     std::map<std::string, std::string>      _headers;
     std::string                             _body;
 
 public:
     HttpResponse(const HttpRequest &request);
+    HttpResponse ();
     ~HttpResponse();
 
     // Setters

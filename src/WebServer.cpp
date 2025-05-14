@@ -39,7 +39,7 @@ bool WebServer::_IsItServerFd(int fd)
 
     for (it = _VHost.begin(); it != _VHost.end(); ++it)
     {
-        std::cout << "[DEBUG] checking fd: " << fd << " against server_fd: " << it->GetServerFd() << "\n";
+        //std::cout << "[DEBUG] checking fd: " << fd << " against server_fd: " << it->GetServerFd() << "\n";
         if (fd == it->GetServerFd())
             return true;
     }
@@ -86,12 +86,12 @@ void WebServer::_EventLoop()
         {
             if (_IsItServerFd(*it))
             {
-                std::cout << "++++++++{new client }++++++++====\n";
+                //std::cout << "++++++++{new client }++++++++====\n";
                 _AcceptNewClients(*it);
             }
             else
             {
-                std::cout << "++++++++{old client }++++++++====\n";
+               // std::cout << "++++++++{old client }++++++++====\n";
                 // Client sent data
                 if (_Clients[*it]->handleRead(_epollManager.getEpollFd()) == -1)
                 {
@@ -108,7 +108,7 @@ void WebServer::_EventLoop()
 
 void WebServer::_CleanupInactiveConnection()
 {
-    std::cout << "++++++++{cleanup inactive connection }++++++++====\n";
+   // std::cout << "++++++++{cleanup inactive connection }++++++++====\n";
     time_t now;
     time_t lastActive;
     int fd;
@@ -124,7 +124,7 @@ void WebServer::_CleanupInactiveConnection()
         if (now - lastActive > 10)
         {
             _RemoveClient(fd);
-            std::cout << "Client [" << fd << "] Closed because timeout\n";
+          //  std::cout << "Client [" << fd << "] Closed because timeout\n";
         }
     }
 }
@@ -155,5 +155,5 @@ void WebServer::_RemoveClient(int fd)
     }
 
     _ClientLastActive.erase(fd);
-    std::cout << "Client [" << fd << "] Closed\n";
+  //  std::cout << "Client [" << fd << "] Closed\n";
 }

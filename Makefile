@@ -11,7 +11,8 @@ SRCS     = ./src/main.cpp \
 			./src/HttpError.cpp\
 			./src/Route.cpp\
 			./src/Tools.cpp\
-			./src/VirtualHost.cpp
+			./src/VirtualHost.cpp\
+			./src/HttpResponse.cpp
 OBJS     = $(SRCS:.cpp=.o)
 
 all: $(NAME) clean

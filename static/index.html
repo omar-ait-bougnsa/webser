@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test File Upload</title>
+</head>
+<body>
+    <h2>File Upload Test</h2>
+
+    <!-- Form to upload a file -->
+    <form id="uploadForm" method="POST" enctype="multipart/form-data" action="/your-server-endpoint">
+        <label for="file">Choose a file to upload:</label>
+        <input type="file" id="file" name="file" accept="image/*, .pdf, .txt" required><br><br>
+
+        <button type="submit">Upload File</button>
+    </form>
+
+    <script>
+        // Handle form submission using JavaScript to show a simple message
+        const form = document.getElementById('uploadForm');
+        form.addEventListener('submit', function (e) {
+            e.preventDefault(); // Prevent the default form submission
+
+            const formData = new FormData(form); // Collect form data (including the file)
+
+            // Send the data using Fetch API
+            fetch('/your-server-endpoint', {
+                method: 'POST',
+                body: formData // Send the FormData which contains the file
+            })
+            .then(response => response.json()) // Expect JSON response from the server
+            .then(data => {
+                console.log('Success:', data);
+                alert('File uploaded successfully!');
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                alert('Error uploading file.');
+            });
+        });
+    </script>
+</body>
+</html>
+
+

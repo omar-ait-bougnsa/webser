@@ -1,5 +1,5 @@
 #include "../include/ClientConnection.hpp"
-
+#include "../include/HttpResponse.hpp"
 ClientConnection::ClientConnection() : _fd(-1)
 {
 }
@@ -24,49 +24,59 @@ time_t ClientConnection::getLastActive() const
 
 int ClientConnection::handleRead(int epollFd)
 {
-    char buffer[BUFFER_SIZE];
-    Validator validator;
-    int status_code;
-    (void) epollFd;
+    // char buffer[BUFFER_SIZE];
+    // Validator validator;
+    // int status_code;
+     (void) epollFd;
+   char         buf[1024];
+   std::string  full_request;
+   ssize_t      bytes_read;
+   size_t       length_body;
+   size_t       body_read;
+   size_t       pos;
+   HttpResponse request;
+   while ((bytes_read = read(_fd, buf, 1023)) > 0)
+   {
+      buf[bytes_read] = '\0';
+      full_request += buf;
+      pos = full_request.find("\r\n\r\n");
+      if (pos != std::string::npos)
+      {
+         size_t start =  full_request.find("Content-Length:") + 16;
 
-    int n = recv(_fd, buffer, BUFFER_SIZE - 1, 0);
-    if (n <= 0)
-    {
-        return -1;
-    }
-    else
-    {
-        buffer[n] = '\0';
-        std::cout << "Client [" << _fd << "] send this message: " << buffer;
-        
-        _request.addReadBuffer(buffer);
-
-        if (_request.isHeaderComplete())
-        {
-            std::cout << "+++++++++++++++++++++ {before header parse}++++++++++++++\n";
-            if (!_request.parseHeader())
-                return sendErrorResponse(400);
-            std::cout << "+++++++++++++++++++++ {before validator}++++++++++++++\n";
-            if (!validator.validate(_request, status_code))
-                return sendErrorResponse(status_code);
-            // if (!_request.checkBodyIsReady())
-            // return false;
-            std::cout << "+++++++++++++++++++++ {set isReqValid}++++++++++++++\n";
-
-            _request.setIsReqValid(true);
-        }
-    }
-    return 0;
+         size_t end = full_request.find("\r\n", start);
+         std::string content_length_str = full_request.substr(start, end - start);
+         length_body = atol(content_length_str.c_str());
+         body_read = full_request.size() - pos;
+         if (length_body <= body_read)
+             break;
+      }
+      else 
+         break;
+   }
+   pos = full_request.find("\n");
+   std::string path = full_request.substr(0,pos);
+   std::vector <std::string> method = Tools::split (path,' ');
+   // size_t pos = full_request.find("\r\n\r\n");
+   // if (pos != std::string::npos)
+   // full_request.erase(0,pos);
+   std::cout <<full_request <<std::endl;
+   if (method[0] == "GET")
+      request.handel_get(_fd,method);
+   else if (method[0] == "POST")
+     request.handel_post(_fd,method,full_request);
+   else if (method[0] == "DELETE")
+      std::cout <<"baki makhdam\n";
+    return (0);
 }
-
 int ClientConnection::handleWrite(int epollFd)
 {
     (void)epollFd;
 
-    std::cout << "+++++++++++++++++++++ {inside HandleWrite}++++++++++++++\n";
+   // std::cout << "+++++++++++++++++++++ {inside HandleWrite}++++++++++++++\n";
     if (_request.isDone())
     {
-        std::cout << "+++++++++++++++++++++ {inside isDone()}++++++++++++++\n";
+       // std::cout << "+++++++++++++++++++++ {inside isDone()}++++++++++++++\n";
         std::string response =
             "HTTP/1.1 200 OK\r\n"
             "Content-Length: " +
@@ -75,7 +85,7 @@ int ClientConnection::handleWrite(int epollFd)
                                 "\r\n"
                                 "<h1>Helllo!</h1>";
         send(_fd, response.c_str(), response.size(), 0);
-        std::cout << "send fail\n";
+        //std::cout << "send fail\n";
     }
     return 0;
 }

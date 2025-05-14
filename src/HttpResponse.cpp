@@ -1,5 +1,9 @@
-#include "./include/HttpResponse.hpp"
+#include "../include/HttpResponse.hpp"
 
+HttpResponse::HttpResponse ()
+{
+
+}
 HttpResponse::HttpResponse(const HttpRequest &request) : _request(request)
 {
 }
@@ -24,14 +28,14 @@ void HttpResponse::setBody(const std::string &body)
     _body = body;
 }
 
-std::string HttpResponse::buildResponse()
-{
-    if (_request.getMethod() == "GET")
-    {
-        _body = Tools::readFile(_request.getPath());
-    }
-    // I STOPED HERE CUASE I NEED THE ROUTE LOCATION AND OTHER ATTRIBUTE
-}
+// std::string HttpResponse::buildResponse()
+// {
+//     if (_request.getMethod() == "GET")
+//     {
+//         _body = Tools::readFile(_request.getPath());
+//     }
+//     // I STOPED HERE CUASE I NEED THE ROUTE LOCATION AND OTHER ATTRIBUTE
+// }
 
 int             HttpResponse::getStatus() const
 {
@@ -69,22 +73,23 @@ std::string HttpResponse::getDefaultReasonPhrase(int code)
     case 204:
         return "No Content";
     default:
+    return "Unknown Success";
     }
     return "Unknown Success";
 }
 
 void HttpResponse::handel_post(int fd, std::vector<std::string> method, std::string request)
 {
-    std::string str;
-    std::string filename;
-    size_t pos = request.find("\r\n\r\n");
-
+    std::string     str;
+    std::string     filename;
+    size_t          pos; 
+    pos = request.find("\r\n\r\n");
     if (pos != std::string::npos)
-        _body = request.substr(pos + 5, request.length() - 1);
-    size_t contentDispositionPos = _body.find("Content-Disposition:");
-    if (contentDispositionPos != std::string::npos)
+        _body = request.substr(pos + 4, request.length() - 1);
+    size_t contentPos = _body.find("Content-Disposition:");
+    if (contentPos != std::string::npos)
     {
-        size_t filenamePos = _body.find("filename=", contentDispositionPos);
+        size_t filenamePos = _body.find("filename=", contentPos);
         if (filenamePos != std::string::npos)
         {
             size_t startQuote = _body.find("\"", filenamePos);
@@ -92,13 +97,14 @@ void HttpResponse::handel_post(int fd, std::vector<std::string> method, std::str
             filename = _body.substr(startQuote + 1, endQuote - startQuote - 1);
         }
     }
+    pos = _body.find("boundary=");
+    if (pos != std::string::npos)
+        _boundary = "--" + _body.substr(pos + 10,_body.find("\r\n"));
+    std::cout <<_boundary <<std::endl;
     pos = _body.find("\r\n\r\n");
     if (pos != std::string::npos)
-    {
-        str = _body.substr(pos + 10);
-        std::cout << str << std::endl;
-        std::cout << _body << std::endl;
-    }
+        str = _body.substr(pos + 4);
+
     std::ofstream file(filename.c_str());
     if (!file.is_open())
     {
@@ -156,12 +162,12 @@ void HttpResponse::handel_get(int fd, std::vector<std::string> method)
     send(fd, header.c_str(), header.length(), 0);
     std::ifstream file;
     if (method[1] == "/")
-        file.open("index.html", std::ios::binary);
+        file.open("static/index.html", std::ios::binary);
     else
         file.open(method[1].c_str(), std::ios::binary);
     std::stringstream ss;
     if (!file.is_open())
-        file.open("404.html", std::ios::binary);
+        file.open("static/errors/404.html", std::ios::binary);
     ss << file.rdbuf();
     file.seekg(0, file.end);
     size_t pos = file.tellg();
