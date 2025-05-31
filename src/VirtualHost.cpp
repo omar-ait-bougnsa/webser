@@ -26,8 +26,7 @@ int VirtualHost::SocketSetup()
     _serverFd = socket(AF_INET, SOCK_STREAM, 0);
     if (_serverFd == -1)
         _ErrorExit("Socket Failed");
-    if (setsockopt(_serverFd, SOL_SOCKET, SO_REUSEADDR, &addr, sizeof(addr)) < 0)
-        std::cout << "setsockopt failed\n";
+
     int flags = fcntl(_serverFd, F_GETFL, 0);
     fcntl(_serverFd, F_SETFL, flags | O_NONBLOCK);
 
@@ -74,8 +73,7 @@ void VirtualHost::pars_server(std::vector<std::string> server, int size)
                 str.push_back(server[i]);
                 i++;
             }
-            route.pars_Route(str);
-            _route.push_back(route);
+            _route.push_back(route.pars_Route(str));
             str.clear();
         }
         else if (Pair.first == "listen")
@@ -169,6 +167,26 @@ void VirtualHost::printServer() const
         for (size_t i = 0; i < _route.size(); ++i) 
         {
             std::cout << "    Route " << i + 1 << ":\n";
-//            _route[i].printRoute();
+            _route[i].printRoute();
         }
+}
+
+Route VirtualHost::GetMatchRoute(const std::string &request_Path) const
+{
+    std::vector<Route>::const_iterator it;
+    std::vector<Route>::const_iterator it_save = _route.end();
+
+    for (it = _route.begin(); it != _route.end(); ++it)
+    {
+        if (request_Path.compare(0, it->path_prefix.size(), it->path_prefix) == 0)
+        {
+            if (it_save == _route.end() || it_save->path_prefix.size() < it->path_prefix.size())
+                it_save = it;
+        }
+    }
+
+    if (it_save == _route.end())
+        throw std::runtime_error("No matching route found for path: " + request_Path);
+
+    return (*it_save);
 }

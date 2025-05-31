@@ -2,7 +2,7 @@
 #define CONFIGPARSER_HPP
 
 #include <vector>
-#include "VirtualHost.hpp"
+#include "./VirtualHost.hpp"
 
 class ConfigParser
 {

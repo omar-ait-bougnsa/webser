@@ -1,10 +1,15 @@
 #include "../include/WebServer.hpp"
 
-
-
-int main ()
+int main()
 {
-    WebServer tmp("ssss");
 
-    tmp.Run();
+    try
+    {
+        WebServer tmp("ConfigFile.conf");
+        tmp.Run();
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << e.what() << "[Config Parsing Part]\n";
+    }
 }

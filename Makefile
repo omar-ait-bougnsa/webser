@@ -1,5 +1,5 @@
 CXX      = g++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -fsanitize=address -g
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -fsanitize=address
 
 NAME     = webserv
 SRCS     = ./src/main.cpp \
@@ -9,13 +9,14 @@ SRCS     = ./src/main.cpp \
 			./src/HttpRequest.cpp\
 			./src/Validator.cpp\
 			./src/HttpError.cpp\
-			./src/Route.cpp\
 			./src/Tools.cpp\
-			./src/VirtualHost.cpp\
-			./src/HttpResponse.cpp
+			./src/Route.cpp\
+			./src/ConfigParser.cpp\
+			./src/RequestProcessor.cpp\
+			./src/VirtualHost.cpp
 OBJS     = $(SRCS:.cpp=.o)
 
-all: $(NAME) clean
+all: $(NAME)
 
 $(NAME): $(OBJS)
 	$(CXX) $(CXXFLAGS) $(OBJS) -o $(NAME)

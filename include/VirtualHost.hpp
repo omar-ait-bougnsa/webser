@@ -2,7 +2,7 @@
 #define VIRTUALHOST_HPP
 
 #include "./Route.hpp"
-#include "./Tools.hpp"
+
 #include <sys/socket.h>
 #include <sys/epoll.h>
 #include <netinet/in.h>
@@ -19,7 +19,7 @@
 
 class VirtualHost
 {
-private:
+public:
     std::string                     _host;
     int                             _serverFd;
     int                             _backlog;
@@ -27,14 +27,14 @@ private:
     std::map<int, std::string>      _errorPages;
     size_t                          _clientMaxBodySize;
     std::vector<Route>              _route;
-
-public:
     int                             _port;
+    
     VirtualHost();
     ~VirtualHost();
-    int SocketSetup();
-    int GetServerFd() const;
-    void _ErrorExit(const char *msg);
+    int     SocketSetup();
+    int     GetServerFd() const;
+    Route   GetMatchRoute(const std::string &request_Path) const;
+    void    _ErrorExit(const char *msg);
 
     //  Omar part
 

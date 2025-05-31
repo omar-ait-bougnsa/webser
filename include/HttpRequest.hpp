@@ -34,7 +34,7 @@ private:
 public:
     HttpRequest();
     ~HttpRequest();
-    void addReadBuffer(const char *buffer); // add a buffer to class
+    void addReadBuffer(const char *buffer, int n); // add a buffer to class
     bool isHeaderComplete();                // is header exist in the readBuffer
     bool isBodyComplete();                  // is the size of body complete or not, if not we need to accumulate data
     bool isDone();                            // is everythin in the request is done like post with body or get with just  a valid header

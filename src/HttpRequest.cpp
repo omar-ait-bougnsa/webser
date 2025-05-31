@@ -70,9 +70,9 @@ std::string HttpRequest::getKeyValue(const std::string &key) const
     return it->second;
 }
 
-void HttpRequest::addReadBuffer(const char *buffer)
+void HttpRequest::addReadBuffer(const char *buffer, int n)
 {
-    _readBuffer += buffer;
+    _readBuffer.insert(_readBuffer.end(), buffer, buffer + n);
 }
 
 bool HttpRequest::isHeaderComplete()
@@ -85,6 +85,8 @@ bool HttpRequest::isHeaderComplete()
     if (read_offset != std::string::npos)
     {
         _header = _readBuffer.substr(0, read_offset);
+        _readBuffer = _readBuffer.erase(0, read_offset + 4);
+        std::cout << "$$$$$$$$$$$$$$$$$$$ { ReadBuffer : " << _readBuffer << " } $$$$$$$$$$$$$$$$$$$$$$$";
         _isHeaderReady = true;
         return true;
     }
@@ -192,15 +194,16 @@ bool HttpRequest::parseHeader()
         reset();
         return false;
     }
+
     _isHeadeParse = true;
     return true;
 }
 
 bool HttpRequest::checkBodyIsReady()
 {
-    size_t offset;
-    size_t n;
-    char *endptr;
+    size_t  offset;
+    size_t  n;
+    char    *endptr;
 
     if (_method == "POST" && !_isBodyReady)
     {
@@ -218,6 +221,7 @@ bool HttpRequest::checkBodyIsReady()
     _isBodyReady = true;
     return true;
 }
+
 int HttpRequest::countChar(const std::string &str, char ch)
 {
     int count = 0;

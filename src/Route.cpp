@@ -1,5 +1,5 @@
 #include "../include/Route.hpp"
-#include "../include/Tools.hpp"
+
 
 Route Route::pars_Route(std::vector<std::string>location)
 {
@@ -30,7 +30,7 @@ Route Route::pars_Route(std::vector<std::string>location)
       {
          if (v.size() != 1 || (v[0] != "on" && v[0] != "off"))
             throw ("error in autoindex must 'on' or 'of'");
-         path_prefix = v[0];
+         autoindex = v[0];
       }
       else if (str == "methods")
           methods = v;
@@ -47,8 +47,7 @@ Route Route::pars_Route(std::vector<std::string>location)
 
 
 
-void Route::printRoute() const
- {
+void Route::printRoute() const {
     std::cout << "Route Configuration:\n";
     std::cout << "  Path Prefix: " << path_prefix << "\n";
     std::cout << "  Root Directory: " << root_directory << "\n";

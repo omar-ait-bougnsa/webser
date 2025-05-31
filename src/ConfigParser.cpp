@@ -4,8 +4,8 @@ ConfigParser::ConfigParser(const std::string& filename): _fileName(filename) {}
 
 std::vector<VirtualHost> ConfigParser::parse()
 {
-    std::ifstream file(_fileName);
-    std::vector<std::vector<std::string>> server;
+    std::ifstream file(_fileName.c_str());
+    std::vector<std::vector<std::string> > server;
     std::vector<std::string> str;
     bool check_server = false;
     size_t pos;

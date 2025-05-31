@@ -1,11 +1,10 @@
 #ifndef CLIENTCONNECTION_HPP
 #define CLIENTCONNECTION_HPP
 
-#include "./HttpRequest.hpp"
-#include "./Validator.hpp"
-#include "./HttpError.hpp"
-#include "./Tools.hpp"
-
+#include "./RequestProcessor.hpp"
+#include "./VirtualHost.hpp"
+#include "./HttpResponse.hpp"
+#include "VirtualHost.hpp"
 #define BUFFER_SIZE 1024
 
 class ClientConnection
@@ -15,7 +14,8 @@ private:
     time_t          _lastActive;
     std::string     _writeBuffer;
     HttpRequest     _request;
-    // HttpResponse    _response;
+    HttpResponse    _response;
+    VirtualHost     *_virtualHost;
 
 public:
     ClientConnection();
@@ -25,10 +25,14 @@ public:
     int getFd() const;
     time_t getLastActive() const;
 
-    int handleRead(int epollFd);
-    int handleWrite(int epollFd);
-    int sendErrorResponse(int statusCode);
-    bool isTimedOut(time_t now, int timeoutSec);
+    int     handleRead(int epollFd);
+    int     handleWrite(int epollFd, const RequestProcessor& reqProcessor);
+
+    int     sendErrorResponse(int statusCode);
+    void    sendAutoIndexResponse(const std::string& dir_path);
+    void    sendCGIResponse();
+    bool    isTimedOut(time_t now, int timeoutSec);
+    void    setVirtualHost(VirtualHost  *host);
 };
 
 #endif

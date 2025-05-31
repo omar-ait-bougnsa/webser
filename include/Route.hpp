@@ -1,6 +1,8 @@
 #ifndef ROUTE_HPP
 #define ROUTE_HPP
 
+#include "./Tools.hpp"
+
 #include <iostream>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -18,11 +20,9 @@
 #include <new>
 #include <map>
 
-std::vector<std::string> split_withspace(std::string str);
-
 class Route
 {
-    private :
+    public:
         std::string path_prefix;
         std::string root_directory;
         std::string autoindex;
@@ -30,7 +30,6 @@ class Route
         std::vector<std::string> index_files;
         std::vector<std::string> cgi;
         std::vector<std::string> cgi_path;
-    public:
         void printRoute() const;
         Route pars_Route(std::vector<std::string>location);
 };

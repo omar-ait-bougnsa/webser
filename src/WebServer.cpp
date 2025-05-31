@@ -1,15 +1,15 @@
 #include "../include/WebServer.hpp"
 
-WebServer::WebServer(std::string ConfigFile)
+WebServer::WebServer(std::string fileName)
 {
     //  create all virtual host and config parser
-    VirtualHost tmp;
-    VirtualHost tmp2;
-    (void)ConfigFile;
+    ConfigParser praser(fileName);
 
-    tmp2._port = 9090;
-    _VHost.push_back(tmp);
-    _VHost.push_back(tmp2);
+    _VHost = praser.parse();
+
+    std::vector<VirtualHost>::iterator it;
+    for (it = _VHost.begin() ;it != _VHost.end(); ++it)
+        std::cout << "_VHost fd : "<< it->GetServerFd() <<" | port: " << it->_port << "\n";
 }
 
 WebServer::~WebServer()
@@ -39,14 +39,14 @@ bool WebServer::_IsItServerFd(int fd)
 
     for (it = _VHost.begin(); it != _VHost.end(); ++it)
     {
-        //std::cout << "[DEBUG] checking fd: " << fd << " against server_fd: " << it->GetServerFd() << "\n";
+        std::cout << "[DEBUG] checking fd: " << fd << " against server_fd: " << it->GetServerFd() << "\n";
         if (fd == it->GetServerFd())
             return true;
     }
     return false;
 }
 
-void WebServer::_AcceptNewClients(int fd)
+int WebServer::_AcceptNewClients(int fd)
 {
     // New Client Connection
     std::map<int, ClientConnection *>::iterator it;
@@ -58,12 +58,12 @@ void WebServer::_AcceptNewClients(int fd)
         if (errno == EAGAIN || errno == EWOULDBLOCK)
         {
             // No new clients now — normal!
-            return;
+            return -1;
         }
         else
         {
             perror("accept");
-            return;
+            return -1;
         }
     }
     std::cout << "new_client : " << client_fd << "\n";
@@ -72,12 +72,14 @@ void WebServer::_AcceptNewClients(int fd)
     it = _Clients.find(client_fd);
     if (it == _Clients.end())
         _Clients[client_fd] = new ClientConnection(client_fd);
+    return client_fd;
 }
 
 void WebServer::_EventLoop()
 {
     std::vector<int> readyFds;
     std::vector<int>::iterator it;
+    int client_fd;
 
     while (true)
     {
@@ -86,19 +88,22 @@ void WebServer::_EventLoop()
         {
             if (_IsItServerFd(*it))
             {
-                //std::cout << "++++++++{new client }++++++++====\n";
-                _AcceptNewClients(*it);
+                std::cout << "++++++++{new client }++++++++====\n";
+                client_fd = _AcceptNewClients(*it);
+                _Clients[client_fd]->setVirtualHost(_GetVHostPtr(*it));
+                if (!_Clients[client_fd])
+                    std::cerr << "++++++++++++++++++++++++ERORR ++++++++++++++++++++\n";
             }
             else
             {
-               // std::cout << "++++++++{old client }++++++++====\n";
+                std::cout << "++++++++{old client }++++++++====\n";
                 // Client sent data
                 if (_Clients[*it]->handleRead(_epollManager.getEpollFd()) == -1)
                 {
+                    std::cerr << "[Error] in handle Read\n";
                     _RemoveClient(*it);
                     continue;
                 }
-                _Clients[*it]->handleWrite(_epollManager.getEpollFd());
                 _ClientLastActive[*it] = time(NULL);
             }
         }
@@ -108,7 +113,7 @@ void WebServer::_EventLoop()
 
 void WebServer::_CleanupInactiveConnection()
 {
-   // std::cout << "++++++++{cleanup inactive connection }++++++++====\n";
+    std::cout << "++++++++{cleanup inactive connection }++++++++====\n";
     time_t now;
     time_t lastActive;
     int fd;
@@ -124,7 +129,7 @@ void WebServer::_CleanupInactiveConnection()
         if (now - lastActive > 10)
         {
             _RemoveClient(fd);
-          //  std::cout << "Client [" << fd << "] Closed because timeout\n";
+            std::cout << "Client [" << fd << "] Closed because timeout\n";
         }
     }
 }
@@ -138,7 +143,7 @@ void WebServer::Run()
     }
     catch (const std::exception &e)
     {
-        std::cerr << e.what() << '\n';
+        std::cerr << e.what() <<  "[Server part]\n";
     }
 }
 
@@ -155,5 +160,21 @@ void WebServer::_RemoveClient(int fd)
     }
 
     _ClientLastActive.erase(fd);
-  //  std::cout << "Client [" << fd << "] Closed\n";
+    std::cout << "Client [" << fd << "] Closed\n";
+}
+
+
+VirtualHost *WebServer::_GetVHostPtr(const int& index)
+{
+    std::vector<VirtualHost>::iterator it;
+
+    for (it = _VHost.begin(); it != _VHost.end(); ++it)
+    {
+        int fd_server = it->GetServerFd();
+
+        std::cout << "+++++++++++++++ { fd_server : " << fd_server << "| index: " << index << " } +++++++++++++++++\n"; 
+        if (fd_server == index)
+           return (&(*it));
+    }
+    return NULL;
 }
