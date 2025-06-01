@@ -6,7 +6,6 @@ WebServer::WebServer(std::string fileName)
     ConfigParser praser(fileName);
 
     _VHost = praser.parse();
-
     std::vector<VirtualHost>::iterator it;
     for (it = _VHost.begin() ;it != _VHost.end(); ++it)
         std::cout << "_VHost fd : "<< it->GetServerFd() <<" | port: " << it->_port << "\n";

@@ -54,12 +54,13 @@ int ClientConnection::handleRead(int epollFd)
             RequestProcessor processor(_request, *_virtualHost);
 
             processor.process();
-            if (processor.hasError())
-                return sendErrorResponse(processor.getStatusCode());
-
-            std::cout << "############ resolved path : " << processor.getResolvedPath() << "| statuscode : " << processor.getStatusCode() << "#########\n";
-         
-            // _response.process(*this);
+            // if (processor.hasError())
+            // {
+            //     return sendErrorResponse(processor.getStatusCode());
+            // }
+            _request.setFullpath(processor.getResolvedPath());
+           // std::cout << "############ resolved path : " << processor.getResolvedPath() << "| statuscode : " << processor.getStatusCode() << "#########\n";
+            _response.process(_fd);
             // if (_request.getMethod() == "POST")
             // {
             //     std::string fullPath =  processor.getResolvedPath();
@@ -76,18 +77,17 @@ int ClientConnection::handleRead(int epollFd)
             // {
 
             // }
-
             _request.setIsReqValid(true);
-            if (_request.getMethod() == "GET" && processor.useAutoIndex())
-                sendAutoIndexResponse(processor.getResolvedPath());
-            else if (processor.isCGI())
-                sendCGIResponse();
-            else
-                handleWrite(epollFd, processor);
+            // if (_request.getMethod() == "GET" && processor.useAutoIndex())
+            //     sendAutoIndexResponse(processor.getResolvedPath());
+            // else if (processor.isCGI())
+            //     sendCGIResponse();
+            // else
+            //     handleWrite(epollFd, processor);
             //
 
-            if (!_request.checkBodyIsReady())
-                return false;
+            // if (!_request.checkBodyIsReady())
+            //     return false;
             std::cout << "+++++++++++++++++++++ {set isReqValid}++++++++++++++\n";
         }
     }

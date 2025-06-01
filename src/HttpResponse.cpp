@@ -1,11 +1,11 @@
-#include "./include/HttpResponse.hpp"
-// #include <sys/wait.h>
+#include "../include/HttpResponse.hpp"
+#include <sys/wait.h>
 #include <unistd.h>
 
-HttpResponse::HttpResponse ()
-{
+// HttpResponse::HttpResponse ()
+// {
 
-}
+// }
 HttpResponse::HttpResponse(const HttpRequest &request) : _request(request)
 {
 }
@@ -28,15 +28,6 @@ void HttpResponse::setBody(const std::string &body)
 {
     _body = body;
 }
-
-// std::string HttpResponse::buildResponse()
-// {
-//     if (_request.getMethod() == "GET")
-//     {
-//         _body = Tools::readFile(_request.getPath());
-//     }
-//     // I STOPED HERE CUASE I NEED THE ROUTE LOCATION AND OTHER ATTRIBUTE
-// }
 
 int             HttpResponse::getStatus() const
 {
@@ -131,7 +122,7 @@ void HttpResponse::successfullPOST(int fd)
 {
     std::stringstream   ss;
     size_t              size;
-    std::ifstream file("static/succssful.html",std::ios::binary);
+    std::ifstream file("static/seccefull.html",std::ios::binary);
     if (!file.is_open())
     {
         std::cout << "can't open file\n";
@@ -150,42 +141,39 @@ void HttpResponse::successfullPOST(int fd)
     send(fd, response.c_str(), response.size(), 0);
     send (fd,buffer.data(),size,0);
 }
-void HttpResponse::handel_post(int fd, std::vector<std::string> method, std::string request)
+void HttpResponse::handel_post(int fd)
 {
-    std::string     str;
-    std::string     filename;
-    size_t          pos;
-    size_t          contentPos;
-
-    pos = request.find("\r\n\r\n");
-    if (pos != std::string::npos)
-        _body = request.substr(pos + 4, request.length() - 1);
-    contentPos = _body.find("Content-Disposition:");
-    if (contentPos != std::string::npos)
-    {
-        size_t filenamePos = _body.find("filename=", contentPos);
-        if (filenamePos != std::string::npos)
-        {
-            size_t startQuote = _body.find("\"", filenamePos);
-            size_t endQuote = _body.find("\"", startQuote + 1);
-            filename = _body.substr(startQuote + 1, endQuote - startQuote - 1);
-        }
-    }
-    pos = _body.find("boundary=");
-    if (pos != std::string::npos)
-        _boundary = "--" + _body.substr(pos + 10,_body.find("\r\n"));
-    pos = _body.find("\r\n\r\n");
-    if (pos != std::string::npos)
-        str = _body.substr(pos + 4);
-    std::ofstream file(filename.c_str());
-    if (!file.is_open())
-    {
-        _error_403(fd);
-        return;
-    }
-    file << str;
-    successfullPOST(fd);
-    (void)method;
+    // std::string     str;
+    // std::string     filename;
+    // size_t          pos;
+    // size_t          contentPos;
+    _body = _request.getBody();
+    std::cout << _body <<std::endl;
+    // contentPos = _body.find("Content-Disposition:");
+    // if (contentPos != std::string::npos)
+    // {
+    //     size_t filenamePos = _body.find("filename=", contentPos);
+    //     if (filenamePos != std::string::npos)
+    //     {
+    //         size_t startQuote = _body.find("\"", filenamePos);
+    //         size_t endQuote = _body.find("\"", startQuote + 1);
+    //         filename = _body.substr(startQuote + 1, endQuote - startQuote - 1);
+    //     }
+    // }
+    // pos = _body.find("boundary=");
+    // if (pos != std::string::npos)
+    //     _boundary = "--" + _body.substr(pos + 10,_body.find("\r\n"));
+    // pos = _body.find("\r\n\r\n");
+    // if (pos != std::string::npos)
+    //     str = _body.substr(pos + 4);
+    // std::ofstream file(filename.c_str());
+    // if (!file.is_open())
+    // {
+    //     _error_403(fd);
+    //     return;
+    // }
+    // file << str;
+     successfullPOST(fd);
 }
 
 std::string HttpResponse::check_extation(std::string path)
@@ -217,7 +205,7 @@ std::string HttpResponse::check_extation(std::string path)
         str = "executable" + path;
     return str;
 }
-char **set_env(std::string filePath)
+std::vector<const char *> set_env(std::string filePath)
 {
     std::vector<const char *> env;
     std::string str = "SCRIPT_NAME=" + filePath;
@@ -225,7 +213,7 @@ char **set_env(std::string filePath)
     env.push_back(str.c_str());
     env.push_back("SERVER_PROTOCOL=HTTP/1.1");
 
-    return const_cast<char **>(env.data());
+    return (env);
 }
 void HttpResponse::execut_cgi(int fd,std::string filePath,std::string cgi_path)
 {
@@ -233,10 +221,10 @@ void HttpResponse::execut_cgi(int fd,std::string filePath,std::string cgi_path)
     cgi_path = "/usr/bin/python";
     int status = 0;
     std::string body;
-    char buffer[4096];
+    char buffer[4096000];
     int pip[2];
 
-    char **env = set_env(filePath);
+    std::vector<const char *> env = set_env(filePath);
     std::cout << "env = " <<env[0] <<std::endl;
     if (access(cgi_path.c_str(), X_OK) == -1)
     {
@@ -264,7 +252,7 @@ void HttpResponse::execut_cgi(int fd,std::string filePath,std::string cgi_path)
         argv.push_back(cgi_path.c_str());
         argv.push_back(filePath.c_str());
         close(pip[0]);
-        if (execve (cgi_path.c_str(),const_cast<char **>(argv.data()),env) == -1)
+        if (execve (cgi_path.c_str(),const_cast<char **>(argv.data()),const_cast<char **>(env.data())) == -1)
         {
             std::cout << "execve failed\n";
             exit (1);
@@ -292,8 +280,9 @@ void HttpResponse::execut_cgi(int fd,std::string filePath,std::string cgi_path)
 
 void HttpResponse::handel_get(int fd,std::string path)
 {
-    std::stringstream  header;
-    std::string str;
+    std::stringstream   header;
+    std::string         str;
+    char                buf[1024];
     str  = check_extation(path);
     if (str == "text/py")
     {
@@ -301,32 +290,47 @@ void HttpResponse::handel_get(int fd,std::string path)
             return;
     }
     std::ifstream file;
-    //file.open("static/index.html", std::ios::binary);
     file.open(path.c_str(), std::ios::binary);
     if (!file.is_open())
     {
         _erro_404(fd);
         return;
     }
+
     file.seekg(0, std::ifstream::end);
     size_t size = file.tellg();
     file.seekg(0, std::ifstream::beg);
-    std::vector<char> buffer(size);
     std::cout <<"here is working yes \n\n\n\n";
-    file.read(buffer.data(), size);
     header << "HTTP/1.1 200 OK\r\nContent-Type: " << str << "\r\n";
     header << "Content-Length: " << size << "\r\n";
     header << "Connection: close\r\n\r\n";
+
     str = header.str();
     send(fd,str.c_str(),str.length(),0);
-    send(fd, buffer.data(), size, 0);
+    while (1)
+    {
+        file.read(buf, sizeof(buf));
+        std::streamsize bytes_read = file.gcount();
+        if (bytes_read > 0)
+        {
+            ssize_t sent = send(fd, buf, bytes_read, 0);
+            if (sent == -1)
+            {
+                perror("\n\nsend failed\n\n");
+                break;
+            }
+        }
+        if (file.eof())
+            break;
+    }
     file.close();
-    return;
 }
-void   HttpResponse::process(ClientConnection const &connection)
+void   HttpResponse::process(int fd)
 {
-   if (_request.getMethod() == "GET")
-        handel_get (connection.getFd(),_request.getPath());
-     else
-         std::cout <<"handel_post(connection.getFd(),_request.getPath());";
+    if (_request.getMethod() == "GET")
+        handel_get (fd,_request.getFullpath());
+    else if (_request.getMethod() == "POST")
+        handel_post(fd);
+    else
+         std::cout <<"handel_delet";
 }

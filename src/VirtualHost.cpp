@@ -26,6 +26,8 @@ int VirtualHost::SocketSetup()
     _serverFd = socket(AF_INET, SOCK_STREAM, 0);
     if (_serverFd == -1)
         _ErrorExit("Socket Failed");
+     if (setsockopt(_serverFd, SOL_SOCKET, SO_REUSEADDR, &addr, sizeof(addr)) < 0)
+        _ErrorExit("setsockopt failed");
 
     int flags = fcntl(_serverFd, F_GETFL, 0);
     fcntl(_serverFd, F_SETFL, flags | O_NONBLOCK);

@@ -23,6 +23,7 @@ private:
     std::string _method;
     std::string _path;
     std::string _version;
+    std::string _fullpath;
     std::map<std::string, std::string> _headerMap;
     std::string _body;
     bool        _isHeaderReady;
@@ -46,12 +47,14 @@ public:
     std::string getKeyValue(const std::string& key) const ;
     void reset();
     void getNextRequest();
-
+    std::string getFullpath () const;
     std::string getMethod() const;
     std::string getPath() const;
+    std::string getBody() const;
     std::string getVersion() const;
-
     void        setIsReqValid(bool status);
+    // we well remove this function
+    void setFullpath (std::string path);
 };
 
 

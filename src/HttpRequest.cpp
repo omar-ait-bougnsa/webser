@@ -7,7 +7,14 @@ HttpRequest::HttpRequest() : _isHeaderReady(false), _isBodyReady(false), _isHead
 HttpRequest::~HttpRequest()
 {
 }
-
+std::string HttpRequest::getFullpath () const
+{
+    return _fullpath;
+}
+void HttpRequest::setFullpath (std::string path)
+{
+    _fullpath = path;
+}
 std::string HttpRequest::getMethod() const
 {
     return _method;
@@ -199,28 +206,28 @@ bool HttpRequest::parseHeader()
     return true;
 }
 
-bool HttpRequest::checkBodyIsReady()
-{
-    size_t  offset;
-    size_t  n;
-    char    *endptr;
+// bool HttpRequest::checkBodyIsReady()
+// {
+//     size_t  offset;
+//     size_t  n;
+//     char    *endptr;
 
-    if (_method == "POST" && !_isBodyReady)
-    {
-        offset = _readBuffer.find("\r\n\r\n") + 4;
-        n = strtol(getKeyValue("Content-Length").c_str(), &endptr, 10);
-        if (*endptr != '\0' || static_cast<long>(n) < 0) 
-            return false;
-        if (_readBuffer.size() - offset < n)
-        {
-            _isBodyReady = false;
-            return false;
-        }
-        _body = _readBuffer.substr(offset, _readBuffer.size() - offset);
-    }
-    _isBodyReady = true;
-    return true;
-}
+//     if (_method == "POST" && !_isBodyReady)
+//     {
+//         offset = _readBuffer.find("\r\n\r\n") + 4;
+//         n = strtol(getKeyValue("Content-Length").c_str(), &endptr, 10);
+//         if (*endptr != '\0' || static_cast<long>(n) < 0) 
+//             return false;
+//         if (_readBuffer.size() - offset < n)
+//         {
+//             _isBodyReady = false;
+//             return false;
+//         }
+//         _body = _readBuffer.substr(offset, _readBuffer.size() - offset);
+//     }
+//     _isBodyReady = true;
+//     return true;
+// }
 
 int HttpRequest::countChar(const std::string &str, char ch)
 {
@@ -239,7 +246,10 @@ bool HttpRequest::isDone() // is everything in the request is done like post wit
         return true;
     return false;
 }
-
+std::string HttpRequest::getBody() const
+{
+    return _body;
+}
 void        HttpRequest::setIsReqValid(bool status)
 {
     _isReqValid = status;

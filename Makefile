@@ -1,5 +1,5 @@
-CXX      = g++
-CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -fsanitize=address
+CXX      = c++
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98 -fsanitize=address -g3
 
 NAME     = webserv
 SRCS     = ./src/main.cpp \
@@ -13,7 +13,8 @@ SRCS     = ./src/main.cpp \
 			./src/Route.cpp\
 			./src/ConfigParser.cpp\
 			./src/RequestProcessor.cpp\
-			./src/VirtualHost.cpp
+			./src/VirtualHost.cpp\
+			./src/HttpResponse.cpp
 OBJS     = $(SRCS:.cpp=.o)
 
 all: $(NAME)

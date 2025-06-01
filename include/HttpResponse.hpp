@@ -1,17 +1,17 @@
 #ifndef HTTPRESPONSE_HPP
 #define HTTPRESPONSE_HPP
 
-#include "./RequestProcessor.hpp"
+// #include "./RequestProcessor.hpp"
 #include <sys/stat.h>
-#include "ClientConnection.hpp"
-class ClientConnection;
+// #include "ClientConnection.hpp"
+#include "./HttpRequest.hpp"
 class HttpResponse
 {
 private:
     const HttpRequest&                       _request;
     int                                     _statusCode;
     std::string                             _boundary;
-    std::string                             _reasonPhrase;                
+    std::string                             _reasonPhrase;   
     std::map<std::string, std::string>      _headers;
     std::string                             _body;
     bool                                    _autoindex;
@@ -19,7 +19,7 @@ private:
 
 public:
     HttpResponse(const HttpRequest &request);
-    HttpResponse ();
+   // HttpResponse ();
     ~HttpResponse();
     // Setters
     void            setStatus(int code);
@@ -31,13 +31,13 @@ public:
     std::string     getReasonPhrase() const;
     std::string     getHeader(const std::string &key) const;
     std::string     getBody() const;
-    void            process(ClientConnection const &connection);
+    void            process(int fd);
     // Build Response
     // std::string     buildResponse();
 
     // Handling Methods
     std::string     check_extation (std::string path);
-    void            handel_post(int fd,std::vector<std::string> method,std::string request);
+    void            handel_post(int fd);
     void            handel_get(int fd,std::string path);
     //cgi
     void execut_cgi(int fd,std::string filePath,std::string cgi_path);

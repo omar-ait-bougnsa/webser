@@ -4,17 +4,19 @@ ConfigParser::ConfigParser(const std::string& filename): _fileName(filename) {}
 
 std::vector<VirtualHost> ConfigParser::parse()
 {
-    std::ifstream file(_fileName.c_str());
-    std::vector<std::vector<std::string> > server;
-    std::vector<std::string> str;
-    bool check_server = false;
-    size_t pos;
+    VirtualHost                             host;
+    std::ifstream                           file(_fileName.c_str());
+    std::vector<std::string>                str;
+    bool                                    check_server = false;
+    size_t                                  pos;
+    std::string                             line;
+
     if (!file.is_open())
     {
         std::cout << "can't open Configuration file\n";
         exit(1);
     }
-    std::string line;
+    std::cout << "here is working\n";
     while (getline(file, line))
     {
         pos = line.find("#");
@@ -23,7 +25,7 @@ std::vector<VirtualHost> ConfigParser::parse()
             line.erase(pos, line.length() - pos);
         }
         if (line == "server" && !str.empty() && !check_server)
-            throw("Error config some line is not in block server ");
+            throw std::logic_error("Error config some line is not in block server ");
 
         if (remove_space(line) && line != "server")
         {
@@ -34,22 +36,15 @@ std::vector<VirtualHost> ConfigParser::parse()
         if (line == "server" && !str.empty())
         {
             check_server = true;
-            server.push_back(str);
+            host.pars_server(str,0);
+            _virtualHosts.push_back(host);
             str.clear();
         }
     }
-    
-    server.push_back(str);
-    VirtualHost host;
-
-    for (size_t i = 0; i < server.size(); i++)
-    {
-        host.pars_server(server[i], server.size());
-        _virtualHosts.push_back(host);
-    }
+    host.pars_server(str,0);
+    _virtualHosts.push_back(host);
     return _virtualHosts;
 }
-
 
 int     ConfigParser::remove_space(std::string &line)
 {

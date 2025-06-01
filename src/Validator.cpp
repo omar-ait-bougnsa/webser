@@ -39,7 +39,6 @@ bool Validator::validateHeaders(const HttpRequest& request)
         _status_code = 400;
         return false;
     }
-
     // If POST, Content-Length is mandatory
     if (request.getMethod() == "POST")
     {

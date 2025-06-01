@@ -1,12 +1,15 @@
 #ifndef CLIENTCONNECTION_HPP
 #define CLIENTCONNECTION_HPP
 
-#include "./RequestProcessor.hpp"
 #include "./VirtualHost.hpp"
-#include "./HttpResponse.hpp"
 #include "VirtualHost.hpp"
+#include "HttpResponse.hpp"
+#include "RequestProcessor.hpp"
+
 #define BUFFER_SIZE 1024
 
+// class HttpResponse;
+// class RequestProcessor;
 class ClientConnection
 {
 private:
