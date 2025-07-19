@@ -19,19 +19,23 @@
 #include <sstream>
 #include <new>
 #include <map>
+#include <algorithm>
 
 class Route
 {
     public:
-        std::string path_prefix;
-        std::string root_directory;
-        std::string autoindex;
-        std::vector<std::string> methods;
-        std::vector<std::string> index_files;
-        std::vector<std::string> cgi;
-        std::vector<std::string> cgi_path;
-        void printRoute() const;
+        std::string                 path_prefix;
+        std::string                 root_directory;
+        std::string                 autoindex;
+        std::vector<std::string>    methods;
+        std::vector<std::string>    index_files;
+        std::vector<std::string>    cgi;
+        std::vector<std::string>    cgi_path;
+        std::string                 redirect_code;
+        std::string                 redirect_location;
+        std::string                 upload_path;
         Route pars_Route(std::vector<std::string>location);
+        void clear();
 };
 
 #endif

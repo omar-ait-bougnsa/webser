@@ -2,7 +2,6 @@
 #define WEBSERVER_HPP
 
 #include "./ClientConnection.hpp"
-#include "./EpollManager.hpp"
 
 class WebServer
 {

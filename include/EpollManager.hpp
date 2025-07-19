@@ -7,6 +7,11 @@
 #include <stdexcept>
 #include <cerrno>
 
+struct EpollEvent {
+    int fd;
+    uint32_t events;
+};
+
 class EpollManager
 {
 private:
@@ -17,10 +22,12 @@ public:
     EpollManager();
     ~EpollManager();
 
-    void addFd(int fd);
-    void removeFd(int fd);
-    std::vector<int> waitEvents(int timeoutMs = 5000);
-    int getEpollFd() const;
+    void                    createEpollManger();
+    void                    addFd(int fd);
+    void                    removeFd(int fd);
+    std::vector<EpollEvent> waitEvents(int timeoutMs = 5000);
+    void                    modifyFd(int fd, uint32_t events);
+    int                     getEpollFd() const;
 };
 
 

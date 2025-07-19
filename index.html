@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Webserv Test Page</title>
+</head>
+<body>
+  <h1>🚀 Webserv Feature Test</h1>
+
+  <section>
+    <h2>📥 File Upload</h2>
+    <form action="/upload" method="POST" enctype="multipart/form-data">
+      <input type="file" name="file" />
+      <button type="submit">Upload</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>📝 GET and POST Forms</h2>
+    <form action="/cgi-bin/echo.py" method="GET">
+      <input type="text" name="get_name" placeholder="GET test" />
+      <button type="submit">Send GET</button>
+    </form>
+
+    <form action="/cgi-bin/echo.py" method="POST">
+      <input type="text" name="post_name" placeholder="POST test" />
+      <button type="submit">Send POST</button>
+    </form>
+  </section>
+
+  <section>
+    <h2>🔁 Redirection</h2>
+    <a href="/redirect">Go to redirect test</a>
+    <p><i>Server should redirect /redirect to something else (e.g. /index.html)</i></p>
+  </section>
+</body>
+</html>

@@ -1,16 +1,18 @@
 #include "../include/ClientConnection.hpp"
 
+// static int p = 0;
 ClientConnection::ClientConnection() : _fd(-1), _request(), _response(_request), _virtualHost(NULL)
 {
+    _cgirun = false;
 }
 
-ClientConnection::ClientConnection(int fd) :  _fd(fd), _request(), _response(_request), _virtualHost(NULL)
+ClientConnection::ClientConnection(int fd) : _fd(fd), _request(), _response(_request), _virtualHost(NULL)
 {
+
 }
 
 ClientConnection::~ClientConnection()
 {
-
 }
 int ClientConnection::getFd() const
 {
@@ -21,13 +23,104 @@ time_t ClientConnection::getLastActive() const
 {
     return _lastActive;
 }
-
-int ClientConnection::handleRead(int epollFd)
+bool ClientConnection::isCGIRequest()
 {
+    return (_cgirun);
+}
+
+int ClientConnection::handleCGIWrite(EpollManager &epollManager)
+{
+    (void)epollManager; // To avoid unused parameter warning
+    if (_request.getMethod() != "POST")
+    {
+        //epollManager.removeFd(_cgiInputFd);
+        close(_cgiInputFd);
+        _cgiInputFd = -1;
+        //epollManager.modifyFd(_fd, EPOLLIN);
+        _response._cgi.file.close();
+        return 0;
+    }
+    char buff[1024];
+    _response._cgi.file.read(buff, sizeof(buff));
+    std::streamsize bytesToWrite = _response._cgi.file.gcount();
+    if (bytesToWrite > 0)
+     write(_cgiInputFd, buff, bytesToWrite);
+    if (_response._cgi.file.eof())
+    {
+        //epollManager.removeFd(_cgiInputFd);
+        close(_cgiInputFd);
+        _cgiInputFd = -1;
+        //epollManager.modifyFd(_fd, EPOLLIN);
+        _response._cgi.file.close();
+    }
+    return 0;
+}
+
+int ClientConnection::addFileCGI(EpollManager &epollManager)
+{
+    _cgiInputFd = _response._cgi.input[1];
+    _cgiOutputFd = _response._cgi.pip[0];
+    int flags = fcntl(_cgiInputFd, F_GETFL, 0);
+    fcntl(_cgiInputFd, F_SETFL, flags | O_NONBLOCK);
+    flags = fcntl(_cgiOutputFd, F_GETFL, 0);
+    fcntl(_cgiOutputFd, F_SETFL, flags | O_NONBLOCK);
+    epollManager.addFd(_cgiInputFd);
+    epollManager.addFd(_cgiOutputFd);
+    epollManager.modifyFd(_cgiInputFd, EPOLLOUT);
+    epollManager.modifyFd(_cgiOutputFd, EPOLLIN);
+    return (0);
+}
+
+int ClientConnection::handleCGIRead(EpollManager &epollManager)
+{
+    char buf[4096];
+    ssize_t bytes = read(_cgiOutputFd, buf, sizeof(buf));
+    if (bytes > 0)
+    {
+        _response._sendBuffer.append(buf, bytes);
+        return 0;
+    }
+    else if (bytes == 0)
+    {
+        // std::cout << "buffer = " << _response._sendBuffer << "\n";
+        _response.cgi_response(_fd,_response._sendBuffer);
+        cleanupCGI();
+        _cgirun = false;
+        epollManager.modifyFd(_fd, EPOLLIN | EPOLLOUT);
+         return -1;
+    }
+    return 0;
+}
+
+
+// bool ClientConnection::isCGITimedOut()
+// {
+
+// }
+
+void ClientConnection::cleanupCGI()
+{
+    if (_cgiInputFd != -1)
+    {
+        close(_cgiInputFd);
+        _cgiInputFd = -1;
+    }
+    if (_cgiOutputFd != -1)
+    {
+        close(_cgiOutputFd);
+        _cgiOutputFd = -1;
+    }
+    if (_response._cgi.pid != -1)
+    {
+        kill(_response._cgi.pid, SIGKILL);
+        waitpid(_response._cgi.pid, NULL, 0);
+        _response._cgi.pid = -1;
+    }
+}
+int ClientConnection::handleRead(EpollManager &epollManager)
+{
+    RequestProcessor processor(_request, *_virtualHost);
     char buffer[BUFFER_SIZE];
-    Validator validator;
-    int status_code;
-    (void)epollFd;
 
     int n = recv(_fd, buffer, BUFFER_SIZE - 1, 0);
     if (n <= 0)
@@ -38,202 +131,114 @@ int ClientConnection::handleRead(int epollFd)
     else
     {
         buffer[n] = '\0';
-        std::cout << "Client [" << _fd << "] send this message: " << buffer;
 
+        if (_request.getReadBuffer().empty() &&
+            ((n == 1 && (buffer[0] == '\n' || buffer[0] == '\r')) ||
+             (n == 2 && buffer[0] == '\r' && buffer[1] == '\n')))
+            return 0;
         _request.addReadBuffer(buffer, n);
-
-        if (_request.isHeaderComplete())
+        if (!_request.isRequestValid())
+        {
+            std::cout << "#####################{inside  is request valid (false)}###########################\n";
+            return processor.sendErrorResponse(400, _fd);
+        }
+        if (_request.isHeaderComplete() && !_request.isHeaderValidated())
         {
             std::cout << "+++++++++++++++++++++ {before header parse}++++++++++++++\n";
             if (!_request.parseHeader())
-                return sendErrorResponse(400);
-            std::cout << "+++++++++++++++++++++ {before validator}++++++++++++++\n";
-            if (!validator.validate(_request, status_code))
-                return sendErrorResponse(status_code);
-            
-            RequestProcessor processor(_request, *_virtualHost);
-
+                return processor.sendErrorResponse(400, _fd);
             processor.process();
-            // if (processor.hasError())
-            // {
-            //     return sendErrorResponse(processor.getStatusCode());
-            // }
-            _request.setFullpath(processor.getResolvedPath());
-           // std::cout << "############ resolved path : " << processor.getResolvedPath() << "| statuscode : " << processor.getStatusCode() << "#########\n";
-            _response.process(_fd);
-            // if (_request.getMethod() == "POST")
-            // {
-            //     std::string fullPath =  processor.getResolvedPath();
-            //     _response.handel_post(_fd, fullPath);
-            //     if (!_response.isBodyComplet())
-            //         return 0;
-            //     else
-            //     {
-            //         _request.reset();     
-            //     }
+            if (processor.hasError())
+                return processor.sendErrorResponse(processor.getStatusCode(), _fd);
 
-            // }
-            // else
-            // {
-
-            // }
+            else if (processor.hasRedirect())
+                return SendRedirectResponse(processor);
             _request.setIsReqValid(true);
-            // if (_request.getMethod() == "GET" && processor.useAutoIndex())
-            //     sendAutoIndexResponse(processor.getResolvedPath());
-            // else if (processor.isCGI())
-            //     sendCGIResponse();
-            // else
-            //     handleWrite(epollFd, processor);
-            //
-
-            // if (!_request.checkBodyIsReady())
-            //     return false;
-            std::cout << "+++++++++++++++++++++ {set isReqValid}++++++++++++++\n";
         }
-    }
-    return 0;
-}
-
-int ClientConnection::handleWrite(int epollFd, const RequestProcessor &reqProcessor)
-{
-    (void)epollFd;
-
-    std::cout << "+++++++++++++++++++++ {inside HandleWrite}++++++++++++++\n";
-
-    if (_request.isDone())
-    {
-        std::string filePath = reqProcessor.getResolvedPath();
-        std::string body = Tools::readFile(filePath); // readFile should return content or empty string
-        std::stringstream bodySize;
-        bodySize << body.size();
-
-        if (body.empty())
+        if (_request.isHeaderComplete() && _request.isHeaderValidated())
         {
-            return sendErrorResponse(404); // or return appropriate error
+            static int i;
+            std::cout << "\n@@@@@@@@@@@@@@@@@@@@@@@@ {" << i++ << "} @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n";
+            _response.setReqProcessor(&processor);
+            _response._contentLenght = std::strtol(_request.getKeyValue("Content-Length").c_str(), NULL, 10);
+            _response.process(_fd);
+            if (_request.getCGI() && _response._waitingToSend)
+            {
+                _cgirun = true;
+                addFileCGI(epollManager);
+                epollManager.modifyFd(_fd, EPOLLIN | EPOLLOUT);
+            }
+            if (_response._headerSent && _response._waitingToSend)
+            _request.clearReadBuffer();
         }
-
-        std::string response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Length: " +
-            bodySize.str() + "\r\n"
-                             "Content-Type: text/html\r\n"
-                             "Connection: keep-alive\r\n"
-                             "\r\n" +
-            body;
-
-        send(_fd, response.c_str(), response.size(), 0);
     }
-
     return 0;
 }
 
-bool ClientConnection::isTimedOut(time_t now, int timeoutSec)
+int ClientConnection::handleWrite(EpollManager &epollManager)
 {
-    (void)now;
-    (void)timeoutSec;
-    return false;
+    RequestProcessor processor(_request, *_virtualHost);
+char buf[6000];
+int status = 0;
+_response._infile.read(buf, sizeof(buf));
+size_t bytes_read = _response._infile.gcount();
+_response._sendBuffer.append(buf, bytes_read);
+if (_request.getCGI())
+{
+    int n = waitpid(_response._cgi.pid, &status, 1);
+    if (n == 0 && time(NULL) - _response._cgi.time > 6)
+    {
+          processor.sendErrorResponse (500,_fd);
+            kill(_response._cgi.pid, SIGKILL);
+            waitpid(_response._cgi.pid, NULL, 0);
+            _response._waitingToSend = false;
+            close (_response._cgi.input[1]);
+            close (_response._cgi.pip[0]);
+            epollManager.modifyFd(_fd, EPOLLIN);
+            return 0;
+    }
+    if ( n != 0 && _response._cgi.sendResponse(_fd) ==0)
+    {
+            _response._waitingToSend = false;
+            close (_response._cgi.input[1]);
+            close (_response._cgi.pip[0]);
+            epollManager.modifyFd(_fd, EPOLLIN);
+        }
 }
-
-int ClientConnection::sendErrorResponse(int statusCode)
+if (_response._waitingToSend && !_response._sendBuffer.empty())
 {
-    std::stringstream ss;
-    std::stringstream bodySize;
-    std::string body;
-
-    std::cout << "+++++++++++++++++++++ {inside send error} ++++++++++++++\n";
-
-    HttpError error(statusCode);
-    ss << statusCode;
-
-    std::string errorPagePath;
-
-    // Step 1: Try to find custom error page from VirtualHost config
-    if (_virtualHost->_errorPages.count(statusCode))
+    ssize_t sent = send(_fd, _response._sendBuffer.c_str(), _response._sendBuffer.size(), 0);
+    if (sent == -1)
     {
-        errorPagePath = _virtualHost->_errorPages.at(statusCode);
-    }
-    else
-    {
-        // Step 2: Use fallback static path
-        errorPagePath = "./static/errors/" + ss.str() + ".html";
-    }
-
-    // Read the content of the error file
-    body = Tools::readFile(errorPagePath);
-
-    // Step 3: Final fallback if file missing
-    if (body.empty())
-    {
-        body = "<h1>" + error.getMessage() + "</h1>";
-    }
-
-    bodySize << body.size();
-
-    std::string response = error.getStatusLine() + "\r\n" +
-                           "Content-Length: " + bodySize.str() + "\r\n" +
-                           "Content-Type: text/html\r\n" +
-                           "Connection: close\r\n" +
-                           "\r\n" +
-                           body;
-
-    std::cout << "+++++++++++++++++++++ {before send() function in error}++++++++++++++\n";
-
-    ssize_t sent = send(_fd, response.c_str(), response.length(), 0);
-    if (sent < 0)
-    {
-        perror("send");
         return -1;
     }
+    _response._sendBuffer.erase(0, sent);
 
-    std::cout << "+++++++++++++++++++++ {after send() function in error}++++++++++++++\n";
-    return -1;
+    if (_response._infile.eof())
+    {
+        _response._waitingToSend = false;
+        epollManager.modifyFd(_fd, EPOLLIN); // Remove EPOLLOUT
+        _response._infile.close();
+    }
+}
+    return 0;
 }
 
-void ClientConnection::sendAutoIndexResponse(const std::string &dir_path)
+int ClientConnection::SendRedirectResponse(const RequestProcessor &processor) const
 {
-    std::cout << "$$$$$$$$$ { Inside Auto Index Responose } $$$$$$$$$$$\n";
-    DIR *dir = opendir(dir_path.c_str());
-    if (!dir)
-    {
-        perror("opendir");
-        sendErrorResponse(500); // Internal Server Error
-        return;
-    }
-    std::stringstream body;
-    body << "<html><head><title>Index of " << dir_path << "</title></head><body>";
-    body << "<h1>Index of " << dir_path << "</h1><ul>";
+    std::string response;
+    Route route = processor.getMatchedRoute();
 
-    struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL)
-    {
-        std::string name = entry->d_name;
-
-        // Skip "." and ".."
-        if (name == "." || name == "..")
-            continue;
-
-        std::string fullPath = dir_path + "/" + name;
-
-        struct stat fileStat;
-        if (stat(fullPath.c_str(), &fileStat) == 0 && S_ISDIR(fileStat.st_mode))
-            name += "/";
-
-        body << "<li><a href=\"" << name << "\">" << name << "</a></li>";
-    }
-
-    body << "</ul></body></html>";
-    closedir(dir);
-
-    std::stringstream response;
-    response << "HTTP/1.1 200 OK\r\n"
-             << "Content-Type: text/html\r\n"
-             << "Content-Length: " << body.str().size() << "\r\n"
-             << "Connection: close\r\n\r\n"
-             << body.str();
-
-    ssize_t sent = send(_fd, response.str().c_str(), response.str().length(), 0);
-    if (sent < 0)
-        perror("send");
+    response = _request.getVersion() + " " + route.redirect_code + " Moved Permanently" + "\r\n" +
+               "Location: " + processor.getMatchedRoute().redirect_location + "\r\n" +
+               "Content-Length: 0" + "\r\n" +
+               "Connection: close" + "\r\n";
+    std::cout << "================= { Route: " << route.path_prefix << "} ===================\n";
+    std::cout << "++++++++++++++ {Redirect Response } ==================\n"
+              << response << std::endl;
+    if (send(_fd, response.c_str(), response.size(), 0) < 0)
+        perror("send redirect");
+    return (-1);
 }
 
 void ClientConnection::sendCGIResponse()

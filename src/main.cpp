@@ -2,7 +2,7 @@
 
 int main()
 {
-
+   signal(SIGPIPE, SIG_IGN);
     try
     {
         WebServer tmp("ConfigFile.conf");

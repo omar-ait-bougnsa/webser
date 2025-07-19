@@ -6,6 +6,7 @@ WebServer::WebServer(std::string fileName)
     ConfigParser praser(fileName);
 
     _VHost = praser.parse();
+    _epollManager.createEpollManger();
     std::vector<VirtualHost>::iterator it;
     for (it = _VHost.begin() ;it != _VHost.end(); ++it)
         std::cout << "_VHost fd : "<< it->GetServerFd() <<" | port: " << it->_port << "\n";
@@ -18,6 +19,38 @@ WebServer::~WebServer()
         delete it->second;
     _Clients.clear();
     _ClientLastActive.clear();
+}
+int WebServer::_AcceptNewClients(int fd)
+{
+    // New Client Connection
+    std::map<int, ClientConnection *>::iterator it;
+    int client_fd;
+
+    client_fd = accept(fd, NULL, NULL);
+    if (client_fd < 0)
+    {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+        {
+            // No new clients now — normal!
+            return -1;
+        }
+        else
+        {
+            perror("accept");
+            return -1;
+        }
+    }
+    std::cout << "new_client : " << client_fd << "\n";
+
+    int flags = fcntl(client_fd, F_GETFL, 0);
+    if (flags == -1) flags = 0;
+    fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
+    _epollManager.addFd(client_fd);
+
+    it = _Clients.find(client_fd);
+    if (it == _Clients.end())
+        _Clients[client_fd] = new ClientConnection(client_fd);
+    return client_fd;
 }
 
 void WebServer::_SetupSockets()
@@ -45,70 +78,77 @@ bool WebServer::_IsItServerFd(int fd)
     return false;
 }
 
-int WebServer::_AcceptNewClients(int fd)
-{
-    // New Client Connection
-    std::map<int, ClientConnection *>::iterator it;
-    int client_fd;
-
-    client_fd = accept(fd, NULL, NULL);
-    if (client_fd < 0)
-    {
-        if (errno == EAGAIN || errno == EWOULDBLOCK)
-        {
-            // No new clients now — normal!
-            return -1;
-        }
-        else
-        {
-            perror("accept");
-            return -1;
-        }
-    }
-    std::cout << "new_client : " << client_fd << "\n";
-    _epollManager.addFd(client_fd);
-
-    it = _Clients.find(client_fd);
-    if (it == _Clients.end())
-        _Clients[client_fd] = new ClientConnection(client_fd);
-    return client_fd;
-}
-
 void WebServer::_EventLoop()
 {
-    std::vector<int> readyFds;
-    std::vector<int>::iterator it;
+    std::vector<EpollEvent> readyEvents;
     int client_fd;
 
     while (true)
     {
-        readyFds = _epollManager.waitEvents();
-        for (it = readyFds.begin(); it != readyFds.end(); ++it)
+        readyEvents = _epollManager.waitEvents();
+        for (size_t i = 0; i < readyEvents.size(); ++i)
         {
-            if (_IsItServerFd(*it))
+            int fd = readyEvents[i].fd;
+            uint32_t events = readyEvents[i].events;
+
+            if (_IsItServerFd(fd))
             {
-                std::cout << "++++++++{new client }++++++++====\n";
-                client_fd = _AcceptNewClients(*it);
-                _Clients[client_fd]->setVirtualHost(_GetVHostPtr(*it));
-                if (!_Clients[client_fd])
-                    std::cerr << "++++++++++++++++++++++++ERORR ++++++++++++++++++++\n";
+                client_fd = _AcceptNewClients(fd);
+                if (_Clients.find(client_fd) != _Clients.end())
+                    _Clients[client_fd]->setVirtualHost(_GetVHostPtr(fd));
             }
             else
             {
-                std::cout << "++++++++{old client }++++++++====\n";
-                // Client sent data
-                if (_Clients[*it]->handleRead(_epollManager.getEpollFd()) == -1)
+                std::cout <<"--------"<< _Clients.count(fd) <<"---------------\n";
+                if (_Clients.count(fd))
                 {
-                    std::cerr << "[Error] in handle Read\n";
-                    _RemoveClient(*it);
-                    continue;
+                    ClientConnection *client = _Clients[fd];
+                    if (client->isCGIRequest())
+                    {
+                        if (events & EPOLLOUT)
+                        {
+                            if (client->handleCGIWrite(_epollManager) == -1)
+                            {
+                                _RemoveClient(fd);
+                                continue;
+                            }
+                        }
+                        if (events & EPOLLIN)
+                        {
+                            exit (1);
+                            if (client->handleCGIRead(_epollManager) == -1)
+                            {
+                                _RemoveClient(fd);
+                                continue;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (events & EPOLLIN)
+                        {
+                            if (client->handleRead(_epollManager) == -1)
+                            {
+                                _RemoveClient(fd);
+                                continue;
+                            }
+                        }
+                        if (events & EPOLLOUT)
+                        {
+                            if (client->handleWrite(_epollManager) == -1)
+                            {
+                                _RemoveClient(fd);
+                                continue;
+                            }
+                        }
+                    }
                 }
-                _ClientLastActive[*it] = time(NULL);
             }
         }
         _CleanupInactiveConnection();
     }
 }
+
 
 void WebServer::_CleanupInactiveConnection()
 {
@@ -125,10 +165,11 @@ void WebServer::_CleanupInactiveConnection()
         fd = it->first;
 
         ++it;
-        if (now - lastActive > 10)
+        if (now - lastActive > 8)
         {
             _RemoveClient(fd);
-            std::cout << "Client [" << fd << "] Closed because timeout\n";
+
+            std::cout  << "Client [" << fd << "] Closed because timeout\n";
         }
     }
 }

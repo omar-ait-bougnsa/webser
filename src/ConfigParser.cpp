@@ -2,74 +2,114 @@
 
 ConfigParser::ConfigParser(const std::string& filename): _fileName(filename) {}
 
+bool ConfigParser::areServerNamesEqual(std::vector<std::string> str1,std::vector<std::string> str2)
+{
+    std::set<std::string> a(str1.begin(),str1.end());
+    std::set<std::string> b(str2.begin(),str2.end());
+    if (a == b)
+        return true;
+    return false;
+}
+void ConfigParser::handleMatchedVHosts()
+{
+    size_t  i = 0;
+    size_t  j = 0;
+    //std::vector<std::string> ServerName1; check server name is dublicate in some port
+    //std::vector<std::string> ServerName2;
+    while (i < _virtualHosts.size())
+    {
+        j = i + 1;
+        if (_virtualHosts[i]._port <= 0)
+            throw std::logic_error("Error: port is not set or invalid");
+        while(j < _virtualHosts.size())
+        {
+            if (_virtualHosts[i]._port == _virtualHosts[j]._port)
+            {
+                //ServerName1 = _virtualHosts[i]._serverNames;
+                //ServerName2 = _virtualHosts[j]._serverNames;
+                //if (areServerNamesEqual(ServerName1,ServerName2))
+                   // throw std::logic_error("Error: duplicate server with same host:port and server_name");
+                if (_virtualHosts[i]._host.empty() || _virtualHosts[i]._host == "0.0.0.0")
+                {
+                _virtualHosts[i]._virtualHosts.push_back(_virtualHosts[j]);
+                _virtualHosts.erase(_virtualHosts.begin() + j);
+                continue;
+                }
+                else if (_virtualHosts[j]._host.empty() || _virtualHosts[j]._host == "0.0.0.0")
+                {
+                    _virtualHosts[j]._virtualHosts.push_back(_virtualHosts[i]);
+                    _virtualHosts.erase(_virtualHosts.begin() + i);
+                    break;
+                      i -= 1;
+                }
+            }
+            j++;
+        }
+        i++;
+    }
+}
+
 std::vector<VirtualHost> ConfigParser::parse()
 {
     VirtualHost                             host;
-    std::ifstream                           file(_fileName.c_str());
+    std::ifstream                           file;
     std::vector<std::string>                str;
-    bool                                    check_server = false;
+    bool                                    insideServer = false;
     size_t                                  pos;
     std::string                             line;
-
+    std::vector<std::vector<std::string> >  servers;
+    (void)insideServer;
+    file.open(_fileName.c_str());
     if (!file.is_open())
-    {
-        std::cout << "can't open Configuration file\n";
-        exit(1);
-    }
-    std::cout << "here is working\n";
+      throw std::logic_error("can't open Configuration file");
     while (getline(file, line))
     {
         pos = line.find("#");
         if (pos != std::string::npos)
-        {
             line.erase(pos, line.length() - pos);
-        }
-        if (line == "server" && !str.empty() && !check_server)
-            throw std::logic_error("Error config some line is not in block server ");
-
-        if (remove_space(line) && line != "server")
+        if (!remove_space(line))
+            continue;
+        if (!line.empty () && line != "server")
         {
+            if (line[line.size() - 1] != '{' && line[line.size() - 1] != '}' && line[line.size() - 1] != ';')
+                throw std::logic_error("Error: line not close by semicolon");
             if (line[line.size() - 1] == ';')
                 line.erase(line.size() - 1, 1);
             str.push_back(line);
         }
         if (line == "server" && !str.empty())
         {
-            check_server = true;
-            host.pars_server(str,0);
+            host.pars_server(str);
             _virtualHosts.push_back(host);
+            host.clear();
             str.clear();
         }
+        if (line == "server")
+            str.push_back(line);
     }
-    host.pars_server(str,0);
+    if (!str.empty())
+    {
+     host.pars_server(str);
     _virtualHosts.push_back(host);
-    return _virtualHosts;
+    }
+    handleMatchedVHosts();
+     return _virtualHosts;
 }
 
 int     ConfigParser::remove_space(std::string &line)
 {
-    size_t i;
+    size_t pos;
     if (line.empty())
         return (0);
-    i = line.size() - 1;
-    while (i > 0)
-    {
-        if (!isspace(line[i]))
-        {
-            line.erase(i + 1, line.size() - i);
-            break;
-        }
-        i--;
-    }
-    i = 0;
-    while (line[i])
-    {
-        if (!isspace(line[i]))
-        {
-            line.erase(0, i);
-            return (1);
-        }
-        i++;
-    }
+    pos = line.find_last_not_of("\n\t\r ");
+    if (pos !=std::string::npos)
+        line.erase(pos +1);
+    else
+        line.clear();
+    pos = line.find_first_not_of("\n\t\r ");
+    if (pos != std::string::npos)
+        line.erase(0,pos);
+    if (!line.empty())
+        return 1;
     return 0;
 }

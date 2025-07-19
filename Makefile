@@ -7,14 +7,15 @@ SRCS     = ./src/main.cpp \
 			./src/EpollManager.cpp\
 			./src/ClientConnection.cpp\
 			./src/HttpRequest.cpp\
-			./src/Validator.cpp\
 			./src/HttpError.cpp\
 			./src/Tools.cpp\
 			./src/Route.cpp\
 			./src/ConfigParser.cpp\
 			./src/RequestProcessor.cpp\
 			./src/VirtualHost.cpp\
-			./src/HttpResponse.cpp
+			./src/HttpResponse.cpp\
+			./src/cgi.cpp\
+			./src/SessionData.cpp
 OBJS     = $(SRCS:.cpp=.o)
 
 all: $(NAME)

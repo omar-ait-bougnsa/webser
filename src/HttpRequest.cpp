@@ -1,19 +1,23 @@
 #include "../include/HttpRequest.hpp"
 
-HttpRequest::HttpRequest() : _isHeaderReady(false), _isBodyReady(false), _isHeadeParse(false), _isReqValid(false)
+HttpRequest::HttpRequest() : _isHeaderReady(false), _isBodyReady(false), _isHeadeParse(false), _isReqValid(false), _isCGI(false), _isFirstLineReqValid(false)
 {
 }
 
 HttpRequest::~HttpRequest()
 {
 }
-std::string HttpRequest::getFullpath () const
+std::string HttpRequest::getFullpath() const
 {
     return _fullpath;
 }
-void HttpRequest::setFullpath (std::string path)
+void HttpRequest::setFullpath(std::string path)
 {
     _fullpath = path;
+}
+std::string HttpRequest::getHeader() const
+{
+    return _header;
 }
 std::string HttpRequest::getMethod() const
 {
@@ -28,6 +32,26 @@ std::string HttpRequest::getVersion() const
 std::string HttpRequest::getPath() const
 {
     return _path;
+}
+
+void HttpRequest::setCGIPath(std::string path)
+{
+    _CGIpath = path;
+}
+
+std::string HttpRequest::getCGIPath () const
+{
+    return _CGIpath;
+}
+
+std::string HttpRequest::getReadBuffer() const
+{
+    return _readBuffer;
+}
+
+bool HttpRequest::getCGI() const
+{
+    return _isCGI;
 }
 
 void HttpRequest::getNextRequest()
@@ -56,11 +80,12 @@ void HttpRequest::getNextRequest()
 
 void HttpRequest::reset()
 {
-    getNextRequest();
+    // getNextRequest();
     _isHeaderReady = false;
     _isHeadeParse = false;
     _isBodyReady = false;
     _isReqValid = false;
+    _isFirstLineReqValid = false;
     _headerMap.clear();
     _header = "";
     _method = "";
@@ -69,7 +94,7 @@ void HttpRequest::reset()
     _body = "";
 }
 
-std::string HttpRequest::getKeyValue(const std::string &key) const 
+std::string HttpRequest::getKeyValue(const std::string &key) const
 {
     std::map<std::string, std::string>::const_iterator it = _headerMap.find(key);
     if (it == _headerMap.end())
@@ -77,10 +102,60 @@ std::string HttpRequest::getKeyValue(const std::string &key) const
     return it->second;
 }
 
-void HttpRequest::addReadBuffer(const char *buffer, int n)
+void HttpRequest::addReadBuffer(char *buffer, int n)
 {
-    _readBuffer.insert(_readBuffer.end(), buffer, buffer + n);
+
+    if (!_isHeadeParse)
+    {
+
+        for (int i = 0; i < n; ++i)
+        {
+            if (buffer[i] == '\n')
+            {
+                if (_readBuffer.empty() || _readBuffer[_readBuffer.size() - 1] != '\r')
+                    _readBuffer += '\r';
+            }
+            _readBuffer += buffer[i];
+        }
+    }
+    else
+        _readBuffer.insert(_readBuffer.end(), buffer, buffer + n);
 }
+
+bool HttpRequest::isRequestValid()
+{
+    if (_isFirstLineReqValid)
+        return true;
+
+    size_t line_end = _readBuffer.find('\n');
+    if (line_end == std::string::npos || !isMethodSpacesValid())
+        return false;
+
+    std::string line = _readBuffer.substr(0, line_end - 1);
+    size_t first_space = line.find(' ');
+    size_t second_space = line.find(' ', first_space + 1);
+    if (first_space == std::string::npos || second_space == std::string::npos)
+        return false;
+
+    _method = line.substr(0, first_space);
+    _path = line.substr(first_space + 1, second_space - first_space - 1);
+    _version = line.substr(second_space + 1);
+
+    // Method must be uppercase alphabetic
+    for (size_t i = 0; i < _method.size(); ++i)
+        if (!std::isupper(_method[i]))
+            return false;
+
+    if (_path.empty() || _path[0] != '/')
+        return false;
+
+    if (_version != "HTTP/1.1" && _version != "HTTP/1.0")
+        return false;
+
+    _isFirstLineReqValid = true;
+    return true;
+}
+
 
 bool HttpRequest::isHeaderComplete()
 {
@@ -93,12 +168,32 @@ bool HttpRequest::isHeaderComplete()
     {
         _header = _readBuffer.substr(0, read_offset);
         _readBuffer = _readBuffer.erase(0, read_offset + 4);
-        std::cout << "$$$$$$$$$$$$$$$$$$$ { ReadBuffer : " << _readBuffer << " } $$$$$$$$$$$$$$$$$$$$$$$";
+        // std::cout << "$$$$$$$$$$$$$$$$$$$ { ReadBuffer : " << _readBuffer << " } $$$$$$$$$$$$$$$$$$$$$$$";
+
         _isHeaderReady = true;
         return true;
     }
     reset();
     return false;
+}
+
+bool HttpRequest::parseHeader()
+{
+    size_t line_end;
+
+    line_end = _header.find("\r\n");
+
+    if (_isHeadeParse)
+        return true;
+
+    if (!fillHeaderMap(_header.substr(line_end + 2)))
+    {
+        reset();
+        return false;
+    }
+
+    _isHeadeParse = true;
+    return true;
 }
 
 bool HttpRequest::isBodyComplete()
@@ -112,21 +207,24 @@ bool HttpRequest::isBodyComplete()
     if (content_lenght.empty())
         return false;
     n = strtol(content_lenght.c_str(), &endptr, 10);
-    if (*endptr == '\0' || static_cast<long> (n) < 0)
+    if (*endptr == '\0' || static_cast<long>(n) < 0)
         return false;
     if (_body.size() < n)
         return false;
     return true;
 }
-
+void HttpRequest::clearReadBuffer()
+{
+    _readBuffer.clear();
+}
 bool HttpRequest::isMethodSpacesValid()
 {
     int offset;
     int offset2;
 
-    offset = _header.find('\n');
-    offset2 = _header.find("\r\n");
-    std::string line = _header.substr(0, offset);
+    offset = _readBuffer.find('\n');
+    offset2 = _readBuffer.find("\r\n");
+    std::string line = _readBuffer.substr(0, offset);
     if (countChar(line, ' ') != 2 || offset2 > offset)
         return false;
     return true;
@@ -144,7 +242,7 @@ bool HttpRequest::isHeaderLineValid(const std::string &line)
         return false; // if \r exist but not in the end
     if (index2 != std::string::npos && index > index2)
         return false;
-    _headerMap[line.substr(0, index)] = line.substr(index + 1, index3 - index - 1);
+    _headerMap[line.substr(0, index)] = line.substr(index + 2, index3 - index - 2);
     return true;
 }
 
@@ -171,41 +269,6 @@ bool HttpRequest::fillHeaderMap(std::string headers)
     return true;
 }
 
-bool HttpRequest::parseHeader()
-{
-    size_t line_end;
-    size_t offset;
-    size_t offset2;
-
-    if (_isHeadeParse)
-        return true;
-    if (!isMethodSpacesValid())
-    {
-        reset();
-        return false;
-    }
-
-    line_end = _header.find("\r\n");
-    std::string line = _header.substr(0, line_end);
-    
-    offset = line.find(' ');
-    _method = line.substr(0, offset);
-    
-    offset2 = line.find(' ', offset + 1);
-    _path = line.substr(offset + 1, offset2 - offset - 1);
-
-    _version = line.substr(offset2 + 1);
-
-    if (!fillHeaderMap(_header.substr(line_end + 2)))
-    {
-        reset();
-        return false;
-    }
-
-    _isHeadeParse = true;
-    return true;
-}
-
 // bool HttpRequest::checkBodyIsReady()
 // {
 //     size_t  offset;
@@ -216,7 +279,7 @@ bool HttpRequest::parseHeader()
 //     {
 //         offset = _readBuffer.find("\r\n\r\n") + 4;
 //         n = strtol(getKeyValue("Content-Length").c_str(), &endptr, 10);
-//         if (*endptr != '\0' || static_cast<long>(n) < 0) 
+//         if (*endptr != '\0' || static_cast<long>(n) < 0)
 //             return false;
 //         if (_readBuffer.size() - offset < n)
 //         {
@@ -240,9 +303,9 @@ int HttpRequest::countChar(const std::string &str, char ch)
     return count;
 }
 
-bool HttpRequest::isDone() // is everything in the request is done like post with body or get with just  a valid header
+bool HttpRequest::isHeaderValidated() // is everything in the request is done like post with body or get with just  a valid header
 {
-    if (_isHeaderReady && _isHeadeParse  && _isReqValid) // &&_isBodyReady)
+    if (_isHeaderReady && _isHeadeParse && _isReqValid)
         return true;
     return false;
 }
@@ -250,7 +313,12 @@ std::string HttpRequest::getBody() const
 {
     return _body;
 }
-void        HttpRequest::setIsReqValid(bool status)
+void HttpRequest::setIsReqValid(bool status)
 {
     _isReqValid = status;
+}
+
+void HttpRequest::setCGI(bool status)
+{
+    _isCGI = status;
 }

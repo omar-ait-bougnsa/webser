@@ -30,31 +30,42 @@ private:
     bool        _isBodyReady;
     bool        _isHeadeParse;
     bool        _isReqValid;
+    bool        _isCGI;
+    std::string _CGIpath;
+    bool        _isFirstLineReqValid;
     int         countChar(const std::string &str, char ch);
 
 public:
     HttpRequest();
     ~HttpRequest();
-    void addReadBuffer(const char *buffer, int n); // add a buffer to class
+    void addReadBuffer(char *buffer, int n); // add a buffer to class
     bool isHeaderComplete();                // is header exist in the readBuffer
     bool isBodyComplete();                  // is the size of body complete or not, if not we need to accumulate data
-    bool isDone();                            // is everythin in the request is done like post with body or get with just  a valid header
+    bool isHeaderValidated();
     bool isMethodSpacesValid();
+    bool isRequestValid();
     bool fillHeaderMap(std::string headers);
     bool parseHeader();
-    bool checkBodyIsReady();
     bool isHeaderLineValid(const std::string& line);
     std::string getKeyValue(const std::string& key) const ;
     void reset();
     void getNextRequest();
+
     std::string getFullpath () const;
     std::string getMethod() const;
     std::string getPath() const;
     std::string getBody() const;
     std::string getVersion() const;
+    std::string getReadBuffer() const;
+    std::string getHeader() const;
+    bool        getCGI()    const;
+    std::string getCGIPath() const;
     void        setIsReqValid(bool status);
+    void        setCGI(bool status);
+    void        setCGIPath(std::string path);
     // we well remove this function
     void setFullpath (std::string path);
+    void clearReadBuffer();
 };
 
 
